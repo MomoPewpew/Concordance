@@ -13,6 +13,7 @@ Ideas from the globe POC. The goal is still the same: this has to feel like **a 
 7. Fresh water — valley rivers and small ponds in the terrain shader; inland seas still have a mesh
 8. Painted-terrain look — harder sun, valley AO, slope rock, baked normals, sunlit/fold color, triplanar grain, valley haze, zoom ridged gulleys
 9. Form and place — sharper ridged peaks, valley clouds, downhill drainages, forest density, feature labels on the globe
+10. Tectonic geography — plates decide land vs ocean and where the mountain belts run; climate still paints biomes
 
 ## Still out of scope
 

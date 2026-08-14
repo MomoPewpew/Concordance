@@ -50,7 +50,7 @@ export function probeSurface(
   x: number,
   y: number,
   z: number,
-  samplers: ClimateSamplers = createClimateSamplers(params.seed),
+  samplers: ClimateSamplers = createClimateSamplers(params),
 ): SurfaceProbe {
   const n = Math.hypot(x, y, z) || 1
   const dx = x / n

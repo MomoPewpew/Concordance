@@ -4,7 +4,7 @@ import { createClimateSamplers, sampleClimate } from '../src/worldgen/climate.ts
 import { applyLapseRate, heightFromClimate } from '../src/worldgen/height.ts'
 
 const params = sampleWorld.globe
-const samplers = createClimateSamplers(params.seed)
+const samplers = createClimateSamplers(params)
 const counts = new Map<string, number>()
 let land = 0
 let ocean = 0

@@ -115,7 +115,7 @@ export function generateFlowStrokes(params: GlobeParams): {
   const cached = flowCache.get(key)
   if (cached) return cached
 
-  const samplers = createClimateSamplers(params.seed)
+  const samplers = createClimateSamplers(params)
   const rng = mulberry32(hashSeed(params.seed, 0x88))
   const windPos: number[] = []
   const windCol: number[] = []

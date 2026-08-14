@@ -75,7 +75,7 @@ export function bakeCubeFace(
   params: GlobeParams,
   face: number,
   size: number,
-  samplers: ClimateSamplers = createClimateSamplers(params.seed),
+  samplers: ClimateSamplers = createClimateSamplers(params),
 ): { albedo: Uint8Array; normals: Uint8Array } {
   const albedo = new Uint8Array(size * size * 4)
   const normals = new Uint8Array(size * size * 4)
@@ -145,7 +145,7 @@ export function bakeCubeMaps(
   params: GlobeParams,
   size = BAKE_SIZE,
 ): { albedo: Uint8Array[]; normals: Uint8Array[] } {
-  const samplers = createClimateSamplers(params.seed)
+  const samplers = createClimateSamplers(params)
   const albedo: Uint8Array[] = []
   const normals: Uint8Array[] = []
   for (let face = 0; face < 6; face++) {

@@ -126,7 +126,7 @@ export function findFeatures(params: GlobeParams): WorldFeature[] {
   const cached = featureCache.get(key)
   if (cached) return cached
 
-  const samplers = createClimateSamplers(params.seed)
+  const samplers = createClimateSamplers(params)
   const cells: Cell[] = new Array(LON_N * LAT_N)
   for (let j = 0; j < LAT_N; j++) {
     const lat = -90 + (j / (LAT_N - 1)) * 180

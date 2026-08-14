@@ -32,7 +32,7 @@ export function precipAt(
 
 export function generatePrecipitation(params: GlobeParams): BufferGeometry {
   const rng = mulberry32(hashSeed(params.seed, 0x77))
-  const samplers = createClimateSamplers(params.seed)
+  const samplers = createClimateSamplers(params)
 
   const dirs: number[] = []
   const phases: number[] = []

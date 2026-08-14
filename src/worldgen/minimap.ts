@@ -19,7 +19,7 @@ export function paintMinimap(params: GlobeParams): ImageData {
   const cached = minimapCache.get(key)
   if (cached) return cached
 
-  const samplers = createClimateSamplers(params.seed)
+  const samplers = createClimateSamplers(params)
   const pixels = new Uint8ClampedArray(MINIMAP_WIDTH * MINIMAP_HEIGHT * 4)
   for (let y = 0; y < MINIMAP_HEIGHT; y++) {
     const lat = 90 - ((y + 0.5) / MINIMAP_HEIGHT) * 180

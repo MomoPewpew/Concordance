@@ -1,6 +1,7 @@
 import type { NoiseFunction3D } from 'simplex-noise'
 import type { GlobeParams } from '../data/types'
 import type { ClimateSample } from './climate'
+import { iceCover } from './height'
 import { fbm3 } from './noise'
 
 export function sampleLakeNoise(
@@ -28,6 +29,7 @@ export function isInlandSea(
   const amount = params.inlandSeas ?? 0
   if (amount < 0.02) return false
   if (height <= 0) return false
+  if (iceCover(climate.temperature) > 0.45) return false
   if (climate.continentalness < 0.05) return false
   const maxFill = 0.005 + amount * 0.024
   if (height > maxFill) return false

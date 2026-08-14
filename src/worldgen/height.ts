@@ -1,23 +1,57 @@
 import type { ClimateSample } from './climate'
-import { lerp, remap, ridged, smoothstep } from './noise'
+import { lerp, ridged, smoothstep } from './noise'
+
+/** 0–1 ice cover from air temperature. Water becomes a landmass past this. */
+export function iceCover(temperature: number): number {
+  return smoothstep(-0.4, -0.62, temperature)
+}
 
 /** Signed height in worldgen units. Sea level is 0. */
 export function heightFromClimate(c: ClimateSample): number {
-  const { continentalness, erosion, weirdness, ridgeFine } = c
+  const {
+    continentalness,
+    erosion,
+    weirdness,
+    ridgeFine,
+    orogeny,
+    divergent,
+    plateLand,
+  } = c
 
-  const ocean = remap(continentalness, -1, -0.19, -0.65, 0)
-  const land = remap(continentalness, -0.19, 1, 0, 0.26)
-  const base = lerp(ocean, land, smoothstep(-0.28, -0.1, continentalness))
+  const plate = smoothstep(0.12, 0.72, plateLand)
+  const seafloor = -0.48 + weirdness * 0.032
+  const platform = 0.016
+  const plateBase = lerp(seafloor, platform, plate)
 
-  const landMask = smoothstep(-0.16, 0.18, continentalness)
+  const landMask = plate
   const erosion01 = erosion * 0.5 + 0.5
-  const mountain = (1 - erosion01) ** 1.7
-  const peaks = ridged(weirdness) ** 1.35 * mountain * landMask
-  const crests = ridged(ridgeFine) ** 2.1 * mountain * landMask
-  const gulleys =
-    (1 - ridged(ridgeFine)) * mountain * landMask * smoothstep(0.04, 0.16, peaks)
+  const rolling = continentalness * 0.05 * landMask
+  const modestRidge =
+    ridged(weirdness) ** 1.4 * (1 - erosion01) ** 1.45 * landMask * 0.075
+  const modestGulley =
+    (1 - ridged(ridgeFine)) * (1 - erosion01) * landMask * 0.022
 
-  return base + peaks * 0.66 + crests * 0.2 - gulleys * 0.07
+  const peaks = ridged(weirdness) ** 1.25
+  const crests = ridged(ridgeFine) ** 2.05
+  const mountains = orogeny * (0.36 + peaks * 0.52 + crests * 0.18)
+  const beltGulleys =
+    orogeny * (1 - ridged(ridgeFine)) * 0.07 * smoothstep(0.18, 0.72, peaks)
+
+  const mor = divergent * (1 - landMask) * 0.11
+  const rift = divergent * landMask * 0.048
+  const crust =
+    plateBase +
+    rolling +
+    modestRidge -
+    modestGulley +
+    mountains -
+    beltGulleys +
+    mor -
+    rift
+
+  const freeze = iceCover(c.temperature)
+  const ice = 0.016 + ridged(weirdness) * 0.012 + ridged(ridgeFine) * 0.006
+  return lerp(crust, Math.max(crust, ice), freeze)
 }
 
 /** Colder with altitude. `elevation` is radial offset (height * heightScale). */

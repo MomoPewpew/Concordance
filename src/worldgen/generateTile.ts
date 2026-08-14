@@ -43,7 +43,7 @@ export function generateTile(
   ti: number,
   tj: number,
   res: number,
-  samplers: ClimateSamplers = createClimateSamplers(params.seed),
+  samplers: ClimateSamplers = createClimateSamplers(params),
 ): TileMeshData {
   const cols = res + 1
   const surfaceCount = cols * cols
@@ -269,7 +269,7 @@ export function generateTile(
 }
 
 export function generateLod0Tiles(params: GlobeParams): TileMeshData[] {
-  const samplers = createClimateSamplers(params.seed)
+  const samplers = createClimateSamplers(params)
   const tiles: TileMeshData[] = []
   for (let face = 0; face < 6; face++) {
     for (let tj = 0; tj < TILES_PER_FACE; tj++) {

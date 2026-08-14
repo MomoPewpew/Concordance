@@ -23,6 +23,7 @@ npm run lint    # oxlint
 - Procedural planet from a **seed + params** (the mesh is never stored)
 - Height-displaced land on streaming cube-sphere tiles, ocean at sea level, inland seas above it, fresnel atmosphere, homosphere clouds
 - Biomes from Minecraft 1.18-style climate: continentalness, erosion, weirdness, temperature, humidity
+- Continents and mountain belts from tectonic plates (seed + params; no stored mesh)
 - Land shading from biome, slope, and elevation (beaches, rock, snow)
 - Harder directional light, valley darkening, and a baked normal cubemap so mountains read as relief instead of vertex paint
 - Fragment-rate biomes, noisy coasts, bump, a worker-baked albedo cubemap, and worker tile LOD so coasts stay sharp when you zoom
@@ -36,7 +37,7 @@ npm run lint    # oxlint
 
 ## Worldgen
 
-Climate is 3D simplex noise sampled on the unit sphere (plus latitude for temperature), so poles do not pinch. Height is a simplified noise router: continentalness for land vs ocean, ridged peaks (plus a finer ridge field) where erosion is low.
+Climate is 3D simplex noise sampled on the unit sphere (plus latitude for temperature), so poles do not pinch. Plates decide continents and the big mountain belts; noise still adds hills, basins, and climate (humidity, erosion, temperature) everywhere else.
 
 A world is fully defined by `GlobeParams` in [`src/data/types.ts`](src/data/types.ts). Change the seed (or use the Randomiser) to rebuild the globe.
 
@@ -54,7 +55,7 @@ Articles are wiki pages with optional globe pins. The POC stores one world plus 
 ```
 src/
   globe/       canvas, terrain, ocean, atmosphere, clouds, axes
-  worldgen/    noise, climate, height, biomes, water, features, rivers, flow, minimap, tiles
+  worldgen/    noise, plates, climate, height, biomes, water, features, rivers, flow, minimap, tiles
   shaders/     terrain, ocean, atmosphere, clouds
   data/        types, sample world, randomiser, wiki, persistence
   ui/          View, Randomiser, article dock, minimap

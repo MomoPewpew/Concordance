@@ -160,14 +160,15 @@ export function pickBiome(
   const h = humidity
   const e = erosion
 
-  if (continentalness < -0.19 || height <= 0) {
+  if (height <= 0) {
     if (t < -0.5) return BIOME.frozenOcean
     if (t < -0.18) return BIOME.coldOcean
     if (t > 0.45) return BIOME.warmOcean
     return BIOME.ocean
   }
 
-  if (height > 0 && continentalness < -0.135) {
+  if (continentalness < -0.135) {
+    if (t < -0.4) return BIOME.snowyPlains
     if (e < -0.4) return BIOME.stonyShore
     if (t < -0.28) return BIOME.snowyBeach
     return BIOME.beach

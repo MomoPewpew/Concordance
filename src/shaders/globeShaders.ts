@@ -423,8 +423,10 @@ void main() {
   float snowHeight = smoothstep(0.02, 0.04, vElevation);
   float snowSlope = 1.0 - smoothstep(0.38, 0.72, slope);
   float snow = max(snowTemp * snowHeight, snowTemp * 0.35 * smoothstep(0.008, 0.03, vElevation));
+  float iceSheet = landCover * smoothstep(-0.38, -0.6, vTemperature);
+  snow = max(snow, iceSheet);
   snow *= 1.0 - fresh * (1.0 - frozen);
-  col = mix(col, uSnowColor, clamp(snow * snowSlope, 0.0, 1.0) * 0.9);
+  col = mix(col, uSnowColor, clamp(snow * mix(snowSlope, 1.0, iceSheet * 0.7), 0.0, 1.0) * 0.9);
 
   float continent = 1.0 - smoothstep(0.48, 1.35, dist);
   float g0 = triGrain(local + uSeed * 0.03, 54.0);
