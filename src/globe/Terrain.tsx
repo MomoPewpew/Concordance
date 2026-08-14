@@ -47,6 +47,8 @@ export function TerrainTiles({
           uSeed: { value: 0 },
           uMaps: { value: emptyCubeMap() },
           uHasMaps: { value: 0 },
+          uNormals: { value: emptyCubeMap() },
+          uHasNormals: { value: 0 },
           uInlandSeas: { value: 0 },
         },
         vertexColors: false,
@@ -54,7 +56,7 @@ export function TerrainTiles({
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -1,
       }),
-    [],
+    [terrainFragmentShader, terrainVertexShader],
   )
 
   useEffect(() => {
@@ -64,8 +66,10 @@ export function TerrainTiles({
   }, [material, params.heightScale, params.seed, params.inlandSeas])
 
   useEffect(() => {
-    material.uniforms.uMaps.value = baked ?? emptyCubeMap()
+    material.uniforms.uMaps.value = baked?.albedo ?? emptyCubeMap()
     material.uniforms.uHasMaps.value = baked ? 1 : 0
+    material.uniforms.uNormals.value = baked?.normals ?? emptyCubeMap()
+    material.uniforms.uHasNormals.value = baked ? 1 : 0
   }, [material, baked])
 
   useFillLight(material, evenLight)

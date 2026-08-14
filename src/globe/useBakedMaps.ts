@@ -45,8 +45,13 @@ export function emptyCubeMap(): CubeTexture {
   return placeholder
 }
 
-export function useBakedMaps(params: GlobeParams): CubeTexture | null {
-  const [texture, setTexture] = useState<CubeTexture | null>(null)
+export type BakedMaps = {
+  albedo: CubeTexture
+  normals: CubeTexture
+}
+
+export function useBakedMaps(params: GlobeParams): BakedMaps | null {
+  const [texture, setTexture] = useState<BakedMaps | null>(null)
   const key = bakeKey(params)
   const paramsRef = useRef(params)
   paramsRef.current = params
@@ -59,10 +64,17 @@ export function useBakedMaps(params: GlobeParams): CubeTexture | null {
     let cancelled = false
     setTexture(null)
     worker.onmessage = (
-      event: MessageEvent<{ size: number; faces: Uint8Array[] }>,
+      event: MessageEvent<{
+        size: number
+        albedo: Uint8Array[]
+        normals: Uint8Array[]
+      }>,
     ) => {
       if (cancelled) return
-      setTexture(cubeFromFaces(event.data.size, event.data.faces))
+      setTexture({
+        albedo: cubeFromFaces(event.data.size, event.data.albedo),
+        normals: cubeFromFaces(event.data.size, event.data.normals),
+      })
     }
     worker.postMessage({
       type: 'bake',
@@ -77,7 +89,8 @@ export function useBakedMaps(params: GlobeParams): CubeTexture | null {
 
   useEffect(() => {
     return () => {
-      texture?.dispose()
+      texture?.albedo.dispose()
+      texture?.normals.dispose()
     }
   }, [texture])
 

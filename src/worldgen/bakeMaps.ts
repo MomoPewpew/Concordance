@@ -63,19 +63,31 @@ function toByte(v: number): number {
   return Math.round(clamp(v, 0, 1) * 255)
 }
 
+function displaced(
+  dir: [number, number, number],
+  elevation: number,
+): [number, number, number] {
+  const r = 1 + elevation
+  return [dir[0] * r, dir[1] * r, dir[2] * r]
+}
+
 export function bakeCubeFace(
   params: GlobeParams,
   face: number,
   size: number,
   samplers: ClimateSamplers = createClimateSamplers(params.seed),
-): Uint8Array {
-  const pixels = new Uint8Array(size * size * 4)
+): { albedo: Uint8Array; normals: Uint8Array } {
+  const albedo = new Uint8Array(size * size * 4)
+  const normals = new Uint8Array(size * size * 4)
+  const elev = new Float32Array(size * size)
+  const dirs: Array<[number, number, number]> = new Array(size * size)
+
   for (let y = 0; y < size; y++) {
     const v = (2 * (y + 0.5)) / size - 1
     for (let x = 0; x < size; x++) {
       const u = (2 * (x + 0.5)) / size - 1
-      const [dx, dy, dz] = cubeFaceDir(face, u, v)
-      const climate = sampleClimate(dx, dy, dz, params, samplers)
+      const dir = cubeFaceDir(face, u, v)
+      const climate = sampleClimate(dir[0], dir[1], dir[2], params, samplers)
       const height = heightFromClimate(climate)
       const elevation = height * params.heightScale
       const temperature = applyLapseRate(climate.temperature, elevation)
@@ -86,22 +98,60 @@ export function bakeCubeFace(
         height,
         temperature,
       )
-      const i = (y * size + x) * 4
-      pixels[i] = toByte(r)
-      pixels[i + 1] = toByte(g)
-      pixels[i + 2] = toByte(b)
-      pixels[i + 3] = toByte(elevation * 6 + 0.5)
+      const i = y * size + x
+      const p = i * 4
+      albedo[p] = toByte(r)
+      albedo[p + 1] = toByte(g)
+      albedo[p + 2] = toByte(b)
+      albedo[p + 3] = toByte(elevation * 6 + 0.5)
+      elev[i] = elevation
+      dirs[i] = dir
     }
   }
-  return pixels
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = y * size + x
+      const xL = Math.max(x - 1, 0)
+      const xR = Math.min(x + 1, size - 1)
+      const yD = Math.max(y - 1, 0)
+      const yU = Math.min(y + 1, size - 1)
+      const pL = displaced(dirs[y * size + xL], elev[y * size + xL])
+      const pR = displaced(dirs[y * size + xR], elev[y * size + xR])
+      const pD = displaced(dirs[yD * size + x], elev[yD * size + x])
+      const pU = displaced(dirs[yU * size + x], elev[yU * size + x])
+      let nx = (pR[1] - pL[1]) * (pU[2] - pD[2]) - (pR[2] - pL[2]) * (pU[1] - pD[1])
+      let ny = (pR[2] - pL[2]) * (pU[0] - pD[0]) - (pR[0] - pL[0]) * (pU[2] - pD[2])
+      let nz = (pR[0] - pL[0]) * (pU[1] - pD[1]) - (pR[1] - pL[1]) * (pU[0] - pD[0])
+      const dir = dirs[i]
+      if (nx * dir[0] + ny * dir[1] + nz * dir[2] < 0) {
+        nx = -nx
+        ny = -ny
+        nz = -nz
+      }
+      const len = Math.hypot(nx, ny, nz) || 1
+      const p = i * 4
+      normals[p] = toByte(nx / len * 0.5 + 0.5)
+      normals[p + 1] = toByte(ny / len * 0.5 + 0.5)
+      normals[p + 2] = toByte(nz / len * 0.5 + 0.5)
+      normals[p + 3] = 255
+    }
+  }
+
+  return { albedo, normals }
 }
 
 export function bakeCubeMaps(
   params: GlobeParams,
   size = BAKE_SIZE,
-): Uint8Array[] {
+): { albedo: Uint8Array[]; normals: Uint8Array[] } {
   const samplers = createClimateSamplers(params.seed)
-  return [0, 1, 2, 3, 4, 5].map((face) =>
-    bakeCubeFace(params, face, size, samplers),
-  )
+  const albedo: Uint8Array[] = []
+  const normals: Uint8Array[] = []
+  for (let face = 0; face < 6; face++) {
+    const baked = bakeCubeFace(params, face, size, samplers)
+    albedo.push(baked.albedo)
+    normals.push(baked.normals)
+  }
+  return { albedo, normals }
 }

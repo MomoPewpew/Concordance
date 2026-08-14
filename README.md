@@ -24,7 +24,8 @@ npm run lint    # oxlint
 - Height-displaced land on streaming cube-sphere tiles, ocean at sea level, inland seas above it, fresnel atmosphere, homosphere clouds
 - Biomes from Minecraft 1.18-style climate: continentalness, erosion, weirdness, temperature, humidity
 - Land shading from biome, slope, and elevation (beaches, rock, snow)
-- Fragment-rate biomes, noisy coasts, bump, a worker-baked cubemap, and worker tile LOD so coasts stay sharp when you zoom
+- Harder directional light, valley darkening, and a baked normal cubemap so mountains read as relief instead of vertex paint
+- Fragment-rate biomes, noisy coasts, bump, a worker-baked albedo cubemap, and worker tile LOD so coasts stay sharp when you zoom
 - **View** menu: spin/orbit axes, even lighting, daylight, climate overlays, view presets, wind and currents
 - **Randomiser** menu: tilt, oceans, mountains, continents, roughness, climate, inland seas, flattening, resolution, seed, compare
 - Named peaks, basins, islands, and lakes are auto-pinned; click the globe to add your own

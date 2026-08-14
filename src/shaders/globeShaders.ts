@@ -16,6 +16,9 @@ varying float vTemperature;
 varying vec3 vClimate;
 varying float vLake;
 varying float vSkirt;
+varying vec3 vWorldX;
+varying vec3 vWorldY;
+varying vec3 vWorldZ;
 
 float hash13(vec3 p) {
   p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
@@ -37,8 +40,12 @@ void main() {
   vec3 pos = position + radial * micro * land;
 
   vLocal = radial;
-  vRadial = normalize(mat3(modelMatrix) * radial);
-  vNormal = normalize(mat3(modelMatrix) * normal);
+  mat3 worldN = mat3(modelMatrix);
+  vWorldX = worldN[0];
+  vWorldY = worldN[1];
+  vWorldZ = worldN[2];
+  vRadial = normalize(worldN * radial);
+  vNormal = normalize(worldN * normal);
   vec4 world = modelMatrix * vec4(pos, 1.0);
   vWorldPos = world.xyz;
   gl_Position = projectionMatrix * viewMatrix * world;
@@ -56,6 +63,8 @@ uniform float uHeightScale;
 uniform float uSeed;
 uniform samplerCube uMaps;
 uniform float uHasMaps;
+uniform samplerCube uNormals;
+uniform float uHasNormals;
 uniform float uInlandSeas;
 
 varying vec3 vNormal;
@@ -67,6 +76,9 @@ varying float vTemperature;
 varying vec3 vClimate;
 varying float vLake;
 varying float vSkirt;
+varying vec3 vWorldX;
+varying vec3 vWorldY;
+varying vec3 vWorldZ;
 
 float hash13(vec3 p) {
   p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
@@ -191,12 +203,19 @@ void main() {
   if (dot(geoN, N) < 0.0) geoN = -geoN;
   float snowHint = smoothstep(0.05, -0.28, vTemperature);
   float geoMix =
-    mix(0.12, 0.32, uHasMaps) *
+    mix(0.1, 0.2, uHasMaps) *
     landCover *
     (1.0 - vSkirt) *
-    (1.0 - snowHint * 0.82);
+    (1.0 - snowHint * 0.82) *
+    mix(1.0, 0.22, uHasNormals);
   N = normalize(mix(N, geoN, geoMix));
   N = normalize(mix(N, radial, vSkirt + snowHint * 0.28 * (1.0 - uHasMaps)));
+  if (uHasNormals > 0.5) {
+    vec3 nLocal = textureCube(uNormals, local).xyz * 2.0 - 1.0;
+    vec3 nBake = normalize(vWorldX * nLocal.x + vWorldY * nLocal.y + vWorldZ * nLocal.z);
+    if (dot(nBake, radial) < 0.0) nBake = -nBake;
+    N = normalize(mix(N, nBake, 0.8 * landCover * (1.0 - vSkirt)));
+  }
 
   float slope = 1.0 - clamp(dot(N, radial), 0.0, 1.0);
 
@@ -315,17 +334,23 @@ void main() {
     vnoise(bp + vec3(0.0, 0.0, eps)) - vnoise(bp - vec3(0.0, 0.0, eps))
   );
   float dry = smoothstep(0.05, -0.2, vClimate.y);
-  float bumpAmp = mix(0.1, 0.55, close) * (0.35 + slope * 1.4 + dry * 0.5);
+  float bumpAmp = mix(0.14, 0.72, close) * (0.28 + slope * 1.85 + dry * 0.45);
   bumpAmp *= 1.0 - fresh * 0.92;
   bumpAmp *= mix(0.15, 1.0, landCover);
   bumpAmp *= 1.0 - vSkirt;
+  bumpAmp *= mix(1.0, 0.55, snowHint);
   N = normalize(N + (grad - radial * dot(grad, radial)) * bumpAmp);
   N = normalize(mix(N, radial, fresh * 0.62));
 
   slope = 1.0 - clamp(dot(N, radial), 0.0, 1.0);
 
-  float rockMix = smoothstep(0.12, 0.42, slope) * (1.0 - fresh) * landCover * (1.0 - vSkirt);
-  col = mix(col, uRockColor, rockMix * 0.92);
+  float rockMix =
+    smoothstep(0.05, 0.26, slope) *
+    (1.0 - fresh) *
+    landCover *
+    (1.0 - vSkirt) *
+    mix(0.72, 1.0, 1.0 - smoothstep(-0.08, 0.22, vClimate.z));
+  col = mix(col, uRockColor, rockMix * 0.96);
 
   vec3 wetSand = mix(srgb(0.62, 0.52, 0.38), sandCol, 0.55);
   vec3 drySand = mix(sandCol, srgb(0.91, 0.82, 0.62), 0.35);
@@ -352,7 +377,25 @@ void main() {
   col = mix(col, uSnowColor, clamp(snow * snowSlope, 0.0, 1.0) * 0.9);
 
   float grain = fbm(local * 42.0 + uSeed, 0.3);
-  col *= 0.95 + grain * mix(0.04, 0.09, close) * (1.0 - fresh * 0.65);
+  col *= 0.95 + grain * mix(0.05, 0.14, close) * (1.0 - fresh * 0.65);
+
+  float valleyAO =
+    landCover *
+    (1.0 - vSkirt) *
+    (1.0 - vLake) *
+    (1.0 - fresh) *
+    smoothstep(-0.2, 0.4, vClimate.z) *
+    (1.0 - smoothstep(0.07, 0.2, height));
+  valleyAO = valleyAO * 0.48 + pow(clamp(slope, 0.0, 1.0), 1.55) * 0.28 * landCover * (1.0 - vSkirt);
+  float ao = 1.0 - clamp(valleyAO, 0.0, 0.65);
+  vec3 Lpre = normalize(uLightDir);
+  float sunHit = clamp(dot(N, Lpre), 0.0, 1.0);
+  col = mix(
+    col,
+    col * vec3(1.12, 1.16, 0.8),
+    sunHit * (1.0 - rockMix) * (1.0 - snow) * landCover * 0.38
+  );
+  col *= mix(0.72, 1.0, ao);
 
   float t = clamp(vTemperature * 0.5 + 0.5, 0.0, 1.0);
   vec3 tempCol = mix(vec3(0.12, 0.28, 0.85), vec3(0.95, 0.95, 0.98), smoothstep(0.0, 0.5, t));
@@ -374,9 +417,11 @@ void main() {
 
   vec3 L = normalize(uLightDir);
   float ndl = dot(N, L);
-  float wrap = mix(ndl * 0.55 + 0.45, 1.0, uFill);
-  float ambient = mix(0.18, 0.38, uFill);
-  vec3 lit = col * (ambient + wrap * 0.88);
+  float hemi = clamp(ndl * 0.5 + 0.5, 0.0, 1.0);
+  float diffuse = mix(pow(hemi, 1.9), 1.0, uFill);
+  float ambient = mix(0.08, 0.38, uFill);
+  vec3 lit = col * (ambient + diffuse * mix(1.08, 0.88, uFill));
+  lit *= mix(mix(0.78, 1.0, ao), 1.0, uFill);
 
   float specMask = snow * 0.35 + rockMix * 0.08 + fresh * mix(0.22, 0.5, 1.0 - frozen);
   vec3 V = normalize(cameraPosition - vWorldPos);
