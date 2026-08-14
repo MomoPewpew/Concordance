@@ -114,6 +114,26 @@ export function RandomiserMenu({
             onChange={(climateVariation) => patch({ climateVariation })}
           />
           <SliderField
+            label="Inland seas"
+            hint="Lakes and epeiric seas above the global ocean"
+            value={settings.inlandSeas}
+            min={0}
+            max={1}
+            step={0.01}
+            display={percent(settings.inlandSeas)}
+            onChange={(inlandSeas) => patch({ inlandSeas })}
+          />
+          <SliderField
+            label="Flattening"
+            hint="Sphere vs oblate (poles squashed)"
+            value={settings.flattening}
+            min={0}
+            max={0.12}
+            step={0.005}
+            display={`${(settings.flattening * 100).toFixed(1)}%`}
+            onChange={(flattening) => patch({ flattening })}
+          />
+          <SliderField
             label="Resolution"
             hint="Mesh density. Higher is sharper coasts, slower to generate"
             value={settings.resolution}

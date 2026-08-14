@@ -43,6 +43,10 @@ export type GlobeParams = {
   oceanBias: number
   /** Obliquity in degrees. 0 = spin axis aligned with the orbit axis. */
   axialTilt: number
+  /** Polar flattening. 0 = sphere. Applied as a Y scale on the planet. */
+  flattening: number
+  /** 0 = no interior water, 1 = large epeiric seas and lakes. */
+  inlandSeas: number
   continentalness: NoiseLayer
   erosion: NoiseLayer
   weirdness: NoiseLayer
@@ -51,7 +55,7 @@ export type GlobeParams = {
 }
 
 /** Auto-named landform from the climate field. */
-export type FeatureKind = 'peak' | 'basin' | 'island'
+export type FeatureKind = 'peak' | 'basin' | 'island' | 'lake'
 
 /** Pin on a world. Lat/lon in degrees. */
 export type ArticlePin = {
@@ -60,7 +64,7 @@ export type ArticlePin = {
   lon: number
 }
 
-/** Hyperlinked article stub. Persistence and wiki editing come later. */
+/** Hyperlinked article. Wiki links use [[Title]]. */
 export type Article = {
   id: string
   universeId: string

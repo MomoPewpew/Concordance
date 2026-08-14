@@ -7,6 +7,8 @@ const globe: GlobeParams = {
   resolution: 320,
   oceanBias: -0.22,
   axialTilt: 0,
+  flattening: 0,
+  inlandSeas: 0.55,
   continentalness: {
     scale: 1.05,
     octaves: 4,

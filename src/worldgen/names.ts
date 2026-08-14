@@ -47,7 +47,7 @@ export function placeName(seed: number, salt: number): string {
 }
 
 export function featureTitle(
-  kind: 'peak' | 'basin' | 'island',
+  kind: 'peak' | 'basin' | 'island' | 'lake',
   seed: number,
   salt: number,
 ): string {
@@ -58,6 +58,9 @@ export function featureTitle(
   }
   if (kind === 'basin') {
     return rng() > 0.5 ? `${name} Basin` : `The ${name} Lowlands`
+  }
+  if (kind === 'lake') {
+    return rng() > 0.4 ? `Lake ${name}` : `The ${name} Sea`
   }
   return rng() > 0.5 ? `Isle of ${name}` : `${name} Island`
 }

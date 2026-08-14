@@ -2,24 +2,14 @@
 
 Ideas from the globe POC. The goal is still the same: this has to feel like **a place you could write about**, not only a noise ball.
 
-## Now (done)
+## Done
 
-1. **Climate overlays** — false-color temperature, humidity, continentalness, erosion.
-2. **Click-to-pin** — click the surface, keep lat/lon, biome, elevation.
-3. **Article stub** — a side dock with a title on the selected pin.
-4. **Seed as a first-class object** — show, edit, copy, rebuild this seed, or roll a new one.
-5. **View presets** — Atlas (even light), From space (lit globe), Climate (overlay).
-6. **Daylight playhead** — play/pause the existing daylight slider.
-7. **Named features** — peaks, basins, islands from the same noise, auto-labeled pins.
-8. **Minimap / unwrapped strip** — biome unwrap at the bottom; click to look there.
-9. **Coastal currents / wind** — vector strokes from prevailing winds and ocean gyres.
-10. **Compare two seeds** — split view with the same sliders and a second seed.
+1. Climate overlays, pins, article stubs, seed, view presets, daylight playhead
+2. Named features, minimap, wind/currents, compare two seeds
+3. **Non-spherical sea level** — inland seas / lakes above the global ocean, plus polar flattening
+4. **Article editor** — Edit/Read, `[[wiki links]]`, **bold** / *italic*, unpinned lore pages
+5. **Local persistence** — world, articles, and view settings in the browser
 
-## Later
+## Still out of scope
 
-11. **Non-spherical sea level** — oblate world or inland seas.
-12. Full article editor, hyperlinks, auth, universes, persistence, planetary LOD.
-
-## Out of scope (still)
-
-Auth, multi-world UI, streaming LOD.
+Auth, multi-universe UI, streaming planetary LOD.

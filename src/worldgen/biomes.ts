@@ -23,6 +23,7 @@ export const BIOME = {
   stonyPeaks: 'stony_peaks',
   frozenPeaks: 'frozen_peaks',
   windswept: 'windswept',
+  inlandSea: 'inland_sea',
 } as const
 
 export type BiomeId = (typeof BIOME)[keyof typeof BIOME]
@@ -49,6 +50,7 @@ export const BIOME_SRGB: Record<BiomeId, [number, number, number]> = {
   stony_peaks: [0.58, 0.56, 0.52],
   frozen_peaks: [0.94, 0.96, 0.97],
   windswept: [0.52, 0.55, 0.42],
+  inland_sea: [0.12, 0.42, 0.48],
 }
 
 export const BIOME_COLORS: Record<BiomeId, [number, number, number]> = (() => {
@@ -64,7 +66,10 @@ export function pickBiome(
   climate: ClimateSample,
   height: number,
   temperature: number,
+  lake = false,
 ): BiomeId {
+  if (lake) return BIOME.inlandSea
+
   const { continentalness, erosion, humidity } = climate
   const t = temperature
   const h = humidity

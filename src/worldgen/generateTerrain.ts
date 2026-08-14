@@ -1,11 +1,9 @@
 import { BufferAttribute, BufferGeometry } from 'three'
 import type { GlobeParams } from '../data/types'
 import { BIOME_COLORS, pickBiome } from './biomes'
-import {
-  createClimateSamplers,
-  sampleClimate,
-} from './climate'
+import { createClimateSamplers, sampleClimate } from './climate'
 import { applyLapseRate, heightFromClimate } from './height'
+import { isInlandSea, sampleLakeNoise } from './water'
 
 const FACE_LAYOUTS: Array<{
   origin: [number, number, number]
@@ -36,14 +34,27 @@ function vertKey(x: number, y: number, z: number): string {
 }
 
 function cacheKey(params: GlobeParams): string {
-  return `v2:${JSON.stringify(params, (key, value) =>
-    key === 'axialTilt' ? undefined : value,
+  return `v3:${JSON.stringify(params, (key, value) =>
+    key === 'axialTilt' || key === 'flattening' ? undefined : value,
   )}`
 }
 
-const geometryCache = new Map<string, BufferGeometry>()
+type GlobeMeshes = {
+  terrain: BufferGeometry
+  lakes: BufferGeometry | null
+}
+
+const geometryCache = new Map<string, GlobeMeshes>()
 
 export function generateTerrain(params: GlobeParams): BufferGeometry {
+  return generateGlobeMeshes(params).terrain
+}
+
+export function generateLakes(params: GlobeParams): BufferGeometry | null {
+  return generateGlobeMeshes(params).lakes
+}
+
+export function generateGlobeMeshes(params: GlobeParams): GlobeMeshes {
   const key = cacheKey(params)
   const cached = geometryCache.get(key)
   if (cached) return cached
@@ -58,6 +69,7 @@ export function generateTerrain(params: GlobeParams): BufferGeometry {
   const temperatures: number[] = []
   const climates: number[] = []
   const colors: number[] = []
+  const lakeFlags: number[] = []
   const indices: number[] = []
 
   const getIndex = (cx: number, cy: number, cz: number): number => {
@@ -69,8 +81,14 @@ export function generateTerrain(params: GlobeParams): BufferGeometry {
     const climate = sampleClimate(sx, sy, sz, params, samplers)
     const height = heightFromClimate(climate)
     const elevation = height * params.heightScale
+    const lake = isInlandSea(
+      climate,
+      height,
+      params,
+      sampleLakeNoise(samplers.lake, sx, sy, sz),
+    )
     const temperature = applyLapseRate(climate.temperature, elevation)
-    const biome = pickBiome(climate, height, temperature)
+    const biome = pickBiome(climate, height, temperature, lake)
     const [r, g, b] = BIOME_COLORS[biome]
 
     const i = sphereX.length
@@ -82,6 +100,7 @@ export function generateTerrain(params: GlobeParams): BufferGeometry {
     temperatures.push(temperature)
     climates.push(climate.continentalness, climate.humidity, climate.erosion)
     colors.push(r, g, b)
+    lakeFlags.push(lake ? 1 : 0)
     return i
   }
 
@@ -112,12 +131,56 @@ export function generateTerrain(params: GlobeParams): BufferGeometry {
 
   ensureOutwardWinding(sphereX, sphereY, sphereZ, indices)
 
+  const parent = new Int32Array(sphereX.length).fill(-1)
+  const find = (a: number): number => {
+    let i = a
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]]
+      i = parent[i]
+    }
+    return i
+  }
+  const union = (a: number, b: number) => {
+    const pa = find(a)
+    const pb = find(b)
+    if (pa !== pb) parent[pa] = pb
+  }
+
+  for (let i = 0; i < lakeFlags.length; i++) {
+    if (lakeFlags[i]) parent[i] = i
+  }
+  for (let t = 0; t < indices.length; t += 3) {
+    const a = indices[t]
+    const b = indices[t + 1]
+    const c = indices[t + 2]
+    if (lakeFlags[a] && lakeFlags[b]) union(a, b)
+    if (lakeFlags[b] && lakeFlags[c]) union(b, c)
+    if (lakeFlags[c] && lakeFlags[a]) union(c, a)
+  }
+
+  const maxElev = new Map<number, number>()
+  for (let i = 0; i < lakeFlags.length; i++) {
+    if (!lakeFlags[i]) continue
+    const root = find(i)
+    const prev = maxElev.get(root) ?? -Infinity
+    if (elevations[i] > prev) maxElev.set(root, elevations[i])
+  }
+
+  const lakeRadius = new Float32Array(sphereX.length)
+  for (let i = 0; i < lakeFlags.length; i++) {
+    if (!lakeFlags[i]) continue
+    lakeRadius[i] = 1 + (maxElev.get(find(i)) ?? elevations[i]) + 0.0007
+  }
+
   const positions = new Float32Array(sphereX.length * 3)
   const minLand = 0.0014
   for (let i = 0; i < sphereX.length; i++) {
     const elevation = elevations[i]
-    const displaced =
-      elevation > params.seaLevel ? Math.max(elevation, minLand) : elevation
+    const displaced = lakeFlags[i]
+      ? lakeRadius[i] - 1 - 0.0009
+      : elevation > params.seaLevel
+        ? Math.max(elevation, minLand)
+        : elevation
     const radius = 1 + displaced
     positions[i * 3] = sphereX[i] * radius
     positions[i * 3 + 1] = sphereY[i] * radius
@@ -145,8 +208,42 @@ export function generateTerrain(params: GlobeParams): BufferGeometry {
   geometry.setIndex(indices)
   geometry.computeVertexNormals()
   geometry.computeBoundingSphere()
-  geometryCache.set(key, geometry)
-  return geometry
+
+  const lakeIndices: number[] = []
+  const lakePositions: number[] = []
+  const lakeIndexOf = new Map<number, number>()
+  const lakeVert = (i: number): number => {
+    const existing = lakeIndexOf.get(i)
+    if (existing !== undefined) return existing
+    const next = lakeIndexOf.size
+    lakeIndexOf.set(i, next)
+    const r = lakeRadius[i]
+    lakePositions.push(sphereX[i] * r, sphereY[i] * r, sphereZ[i] * r)
+    return next
+  }
+  for (let t = 0; t < indices.length; t += 3) {
+    const a = indices[t]
+    const b = indices[t + 1]
+    const c = indices[t + 2]
+    if (!lakeFlags[a] || !lakeFlags[b] || !lakeFlags[c]) continue
+    lakeIndices.push(lakeVert(a), lakeVert(b), lakeVert(c))
+  }
+
+  let lakes: BufferGeometry | null = null
+  if (lakeIndices.length > 0) {
+    lakes = new BufferGeometry()
+    lakes.setAttribute(
+      'position',
+      new BufferAttribute(new Float32Array(lakePositions), 3),
+    )
+    lakes.setIndex(lakeIndices)
+    lakes.computeVertexNormals()
+    lakes.computeBoundingSphere()
+  }
+
+  const result = { terrain: geometry, lakes }
+  geometryCache.set(key, result)
+  return result
 }
 
 function ensureOutwardWinding(

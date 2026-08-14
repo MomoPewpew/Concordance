@@ -69,5 +69,6 @@ export function pinColor(
   if (feature === 'peak') return '#f0d2a8'
   if (feature === 'basin') return '#c4b5fd'
   if (feature === 'island') return '#86efac'
+  if (feature === 'lake') return '#5eead4'
   return '#7dd3fc'
 }

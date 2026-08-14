@@ -9,6 +9,7 @@ export type ClimateSamplers = {
   temperature: NoiseFunction3D
   humidity: NoiseFunction3D
   warp: NoiseFunction3D
+  lake: NoiseFunction3D
 }
 
 export type ClimateSample = {
@@ -27,6 +28,7 @@ export function createClimateSamplers(seed: number): ClimateSamplers {
     temperature: createFbm(hashSeed(seed, 0x44)),
     humidity: createFbm(hashSeed(seed, 0x55)),
     warp: createFbm(hashSeed(seed, 0x66)),
+    lake: createFbm(hashSeed(seed, 0x99)),
   }
 }
 

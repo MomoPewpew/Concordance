@@ -62,7 +62,7 @@ function angularlyFar(
 
 function saltFor(kind: FeatureKind, lat: number, lon: number): number {
   const kindSalt =
-    kind === 'peak' ? 0x11 : kind === 'basin' ? 0x22 : 0x33
+    kind === 'peak' ? 0x11 : kind === 'basin' ? 0x22 : kind === 'island' ? 0x33 : 0x44
   return (kindSalt ^ (Math.round(lat * 10) * 4093) ^ (Math.round(lon * 10) * 17)) >>> 0
 }
 
@@ -76,10 +76,12 @@ function toFeature(
   const where = biomeLabel(cell.biome)
   const summary =
     kind === 'peak'
-      ? `High ground in the ${where}. Named from the height field.`
+      ? `High ground in the ${where}. Named from the height field.\n\nWrite about it, and link other places with [[Title]].`
       : kind === 'basin'
-        ? `A depression in the ${where}. Named from the height field.`
-        : `A landmass in the ${where}. Named from the climate field.`
+        ? `A depression in the ${where}. Named from the height field.\n\nWrite about it, and link other places with [[Title]].`
+        : kind === 'lake'
+          ? `An inland sea in the ${where}. The water table sits above the global ocean.\n\nWrite about it, and link other places with [[Title]].`
+          : `A landmass in the ${where}. Named from the climate field.\n\nWrite about it, and link other places with [[Title]].`
   return {
     kind,
     lat: cell.lat,
@@ -151,6 +153,7 @@ export function findFeatures(params: GlobeParams): WorldFeature[] {
     picked,
     (cell, ring) =>
       cell.land &&
+      !cell.lake &&
       cell.elevation > 0.016 &&
       ring.every((n) => cell.elevation >= n.elevation),
     (a, b) => b.elevation - a.elevation,
@@ -166,7 +169,7 @@ export function findFeatures(params: GlobeParams): WorldFeature[] {
     (cell, ring) => {
       if (ring.length < 6) return false
       const mean = ring.reduce((s, n) => s + n.elevation, 0) / ring.length
-      if (cell.land) {
+      if (cell.land && !cell.lake) {
         const inland = ring.filter((n) => n.land).length >= 6
         return inland && cell.elevation + 0.004 < mean && cell.elevation > 0.001
       }
@@ -228,6 +231,52 @@ export function findFeatures(params: GlobeParams): WorldFeature[] {
     )
     if (!angularlyFar(picked, high.lat, high.lon, 0.93)) continue
     picked.push(toFeature('island', high, params))
+  }
+
+  const lakeParent = new Array(cells.length).fill(-1)
+  const findLake = (a: number): number => {
+    let i = a
+    while (lakeParent[i] !== i) {
+      lakeParent[i] = lakeParent[lakeParent[i]]
+      i = lakeParent[i]
+    }
+    return i
+  }
+  const unionLake = (a: number, b: number) => {
+    const pa = findLake(a)
+    const pb = findLake(b)
+    if (pa !== pb) lakeParent[pa] = pb
+  }
+  for (let i = 0; i < cells.length; i++) {
+    if (cells[i].lake) lakeParent[i] = i
+  }
+  for (let j = 0; j < LAT_N; j++) {
+    for (let i = 0; i < LON_N; i++) {
+      const a = cellIndex(i, j)
+      if (!cells[a].lake) continue
+      for (const [ii, jj] of neighbors(i, j)) {
+        const b = cellIndex(ii, jj)
+        if (cells[b].lake) unionLake(a, b)
+      }
+    }
+  }
+  const seas = new Map<number, Cell[]>()
+  for (let i = 0; i < cells.length; i++) {
+    if (!cells[i].lake) continue
+    const root = findLake(i)
+    const list = seas.get(root)
+    if (list) list.push(cells[i])
+    else seas.set(root, [cells[i]])
+  }
+  const lakeGroups = [...seas.values()]
+    .filter((group) => group.length >= 6)
+    .sort((a, b) => b.length - a.length)
+
+  for (const group of lakeGroups) {
+    if (picked.filter((f) => f.kind === 'lake').length >= 4) break
+    const mid = group[Math.floor(group.length / 2)]
+    if (!angularlyFar(picked, mid.lat, mid.lon, 0.9)) continue
+    picked.push(toFeature('lake', mid, params))
   }
 
   featureCache.set(key, picked)

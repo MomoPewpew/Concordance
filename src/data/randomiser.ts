@@ -17,6 +17,10 @@ export type RandomiserSettings = {
   climateVariation: number
   /** Cube-sphere verts per face edge. */
   resolution: number
+  /** Polar flattening. 0 = sphere. */
+  flattening: number
+  /** Interior lakes and epeiric seas. */
+  inlandSeas: number
 }
 
 const OCEAN_BIAS = { land: 0.18, water: -0.48 }
@@ -54,6 +58,8 @@ export function settingsFromGlobe(globe: GlobeParams): RandomiserSettings {
       globe.temperature.scale,
     ),
     resolution: clamp(globe.resolution, RESOLUTION.min, RESOLUTION.max),
+    flattening: clamp(globe.flattening ?? 0, 0, 0.12),
+    inlandSeas: clamp(globe.inlandSeas ?? 0, 0, 1),
   }
 }
 
@@ -95,6 +101,8 @@ export function globeFromSettings(
     resolution: Math.round(
       clamp(settings.resolution, RESOLUTION.min, RESOLUTION.max),
     ),
+    flattening: clamp(settings.flattening, 0, 0.12),
+    inlandSeas: clamp(settings.inlandSeas, 0, 1),
   }
 }
 

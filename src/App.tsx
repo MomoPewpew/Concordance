@@ -6,8 +6,14 @@ import {
   type RandomiserSettings,
 } from './data/randomiser'
 import type { OverlayMode } from './data/overlay'
+import {
+  loadPersisted,
+  mergeArticles,
+  savePersisted,
+} from './data/persist'
 import { sampleWorld } from './data/sampleWorld'
 import type { Article, LookTarget, World } from './data/types'
+import { titlesMatch } from './data/wiki'
 import { Globe } from './globe/Globe'
 import { ArticleDock } from './ui/ArticleDock'
 import { Minimap } from './ui/Minimap'
@@ -40,23 +46,30 @@ function nearExistingPin(
 
 export default function App() {
   const menusRef = useRef<HTMLDivElement>(null)
+  const saved = useRef(loadPersisted()).current
   const [viewOpen, setViewOpen] = useState(false)
   const [randomiserOpen, setRandomiserOpen] = useState(false)
-  const [showSpinAxis, setShowSpinAxis] = useState(false)
-  const [showFlow, setShowFlow] = useState(true)
-  const [evenLight, setEvenLight] = useState(false)
-  const [overlay, setOverlay] = useState<OverlayMode>('none')
-  const [dayAngle, setDayAngle] = useState(0)
+  const [showSpinAxis, setShowSpinAxis] = useState(
+    saved?.view.showSpinAxis ?? false,
+  )
+  const [showFlow, setShowFlow] = useState(saved?.view.showFlow ?? true)
+  const [evenLight, setEvenLight] = useState(saved?.view.evenLight ?? false)
+  const [overlay, setOverlay] = useState<OverlayMode>(
+    saved?.view.overlay ?? 'none',
+  )
+  const [dayAngle, setDayAngle] = useState(saved?.view.dayAngle ?? 0)
   const [daylightPlaying, setDaylightPlaying] = useState(false)
   const [settings, setSettings] = useState<RandomiserSettings>(
-    defaultRandomiserSettings,
+    saved?.settings ?? defaultRandomiserSettings,
   )
-  const [world, setWorld] = useState(sampleWorld)
+  const [world, setWorld] = useState(saved?.world ?? sampleWorld)
   const [compareWorld, setCompareWorld] = useState<World | null>(null)
-  const [seedDraft, setSeedDraft] = useState(String(sampleWorld.globe.seed))
+  const [seedDraft, setSeedDraft] = useState(
+    String((saved?.world ?? sampleWorld).globe.seed),
+  )
   const [generating, setGenerating] = useState(false)
-  const [articles, setArticles] = useState<Article[]>(() =>
-    articlesFromFeatures(sampleWorld),
+  const [articles, setArticles] = useState<Article[]>(
+    () => saved?.articles ?? articlesFromFeatures(saved?.world ?? sampleWorld),
   )
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [lookTarget, setLookTarget] = useState<LookTarget | null>(null)
@@ -95,6 +108,34 @@ export default function App() {
   }, [world, compareWorld])
 
   useEffect(() => {
+    const id = window.setTimeout(() => {
+      savePersisted({
+        version: 1,
+        world,
+        settings,
+        articles,
+        view: {
+          evenLight,
+          overlay,
+          showFlow,
+          showSpinAxis,
+          dayAngle,
+        },
+      })
+    }, 400)
+    return () => window.clearTimeout(id)
+  }, [
+    world,
+    settings,
+    articles,
+    evenLight,
+    overlay,
+    showFlow,
+    showSpinAxis,
+    dayAngle,
+  ])
+
+  useEffect(() => {
     if (!daylightPlaying) return
     let frame = 0
     const tick = () => {
@@ -111,7 +152,7 @@ export default function App() {
 
   const applyWorld = (next: World) => {
     setWorld(next)
-    setArticles(articlesFromFeatures(next))
+    setArticles(mergeArticles(articlesFromFeatures(next), articlesRef.current))
     setSelectedId(null)
     setCompareWorld(null)
   }
@@ -197,6 +238,37 @@ export default function App() {
     setSelectedId(id)
     const article = articles.find((item) => item.id === id)
     if (article?.pin) lookAt(article.pin.lat, article.pin.lon)
+  }
+
+  const onFollowLink = (title: string) => {
+    const existing = articlesRef.current.find((article) =>
+      titlesMatch(article.title, title),
+    )
+    if (existing) {
+      onSelectPlace(existing.id)
+      return
+    }
+    const article: Article = {
+      id: `wiki-${Date.now().toString(36)}`,
+      universeId: world.universeId,
+      worldId: world.id,
+      title,
+      body: '',
+    }
+    setArticles((list) => [...list, article])
+    setSelectedId(article.id)
+  }
+
+  const onNewArticle = () => {
+    const article: Article = {
+      id: `wiki-${Date.now().toString(36)}`,
+      universeId: world.universeId,
+      worldId: world.id,
+      title: 'Untitled',
+      body: '',
+    }
+    setArticles((list) => [...list, article])
+    setSelectedId(article.id)
   }
 
   const comparing = compareWorld !== null
@@ -300,6 +372,8 @@ export default function App() {
             ),
           )
         }
+        onFollowLink={onFollowLink}
+        onNewArticle={onNewArticle}
         onClose={() => setSelectedId(null)}
       />
     </div>

@@ -38,6 +38,18 @@ export const OCEAN_SHALLOW = new Vector3(
   srgbToLinear(0.55),
 )
 
+export const LAKE_DEEP = new Vector3(
+  srgbToLinear(0.04),
+  srgbToLinear(0.18),
+  srgbToLinear(0.22),
+)
+
+export const LAKE_SHALLOW = new Vector3(
+  srgbToLinear(0.18),
+  srgbToLinear(0.52),
+  srgbToLinear(0.5),
+)
+
 export const ATMOSPHERE_COLOR = new Vector3(
   srgbToLinear(0.45),
   srgbToLinear(0.7),

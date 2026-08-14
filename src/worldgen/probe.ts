@@ -8,6 +8,7 @@ import {
 } from './climate'
 import { applyLapseRate, heightFromClimate } from './height'
 import { clamp } from './noise'
+import { isInlandSea, sampleLakeNoise } from './water'
 
 export type SurfaceProbe = {
   lat: number
@@ -18,6 +19,7 @@ export type SurfaceProbe = {
   humidity: number
   continentalness: number
   erosion: number
+  lake: boolean
 }
 
 export function directionToLatLon(
@@ -57,16 +59,23 @@ export function probeSurface(
   const climate = sampleClimate(dx, dy, dz, params, samplers)
   const height = heightFromClimate(climate)
   const elevation = height * params.heightScale
+  const lake = isInlandSea(
+    climate,
+    height,
+    params,
+    sampleLakeNoise(samplers.lake, dx, dy, dz),
+  )
   const temperature = applyLapseRate(climate.temperature, elevation)
   const { lat, lon } = directionToLatLon(dx, dy, dz)
   return {
     lat,
     lon,
     elevation,
-    biome: pickBiome(climate, height, temperature),
+    biome: pickBiome(climate, height, temperature, lake),
     temperature,
     humidity: climate.humidity,
     continentalness: climate.continentalness,
     erosion: climate.erosion,
+    lake,
   }
 }
