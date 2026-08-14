@@ -15,6 +15,7 @@ export default function App() {
   const [viewOpen, setViewOpen] = useState(false)
   const [randomiserOpen, setRandomiserOpen] = useState(false)
   const [showSpinAxis, setShowSpinAxis] = useState(false)
+  const [evenLight, setEvenLight] = useState(false)
   const [dayAngle, setDayAngle] = useState(0)
   const [settings, setSettings] = useState<RandomiserSettings>(
     defaultRandomiserSettings,
@@ -67,6 +68,8 @@ export default function App() {
           onOpenChange={setViewOpen}
           showSpinAxis={showSpinAxis}
           onShowSpinAxisChange={setShowSpinAxis}
+          evenLight={evenLight}
+          onEvenLightChange={setEvenLight}
           dayAngle={dayAngle}
           onDayAngleChange={setDayAngle}
         />
@@ -80,7 +83,12 @@ export default function App() {
           onGenerate={generate}
         />
       </div>
-      <Globe world={world} showSpinAxis={showSpinAxis} dayAngle={dayAngle} />
+      <Globe
+        world={world}
+        showSpinAxis={showSpinAxis}
+        dayAngle={dayAngle}
+        evenLight={evenLight}
+      />
     </div>
   )
 }

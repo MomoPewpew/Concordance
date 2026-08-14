@@ -28,6 +28,7 @@ uniform vec3 uLightDir;
 uniform vec3 uRockColor;
 uniform vec3 uSandColor;
 uniform vec3 uSnowColor;
+uniform float uFill;
 
 varying vec3 vNormal;
 varying vec3 vColor;
@@ -69,15 +70,15 @@ void main() {
 
   vec3 L = normalize(uLightDir);
   float ndl = dot(N, L);
-  float wrap = ndl * 0.55 + 0.45;
-  float ambient = 0.18;
+  float wrap = mix(ndl * 0.55 + 0.45, 1.0, uFill);
+  float ambient = mix(0.18, 0.38, uFill);
   vec3 lit = col * (ambient + wrap * 0.88);
 
   float specMask = snow * 0.35 + rockMix * 0.08;
   vec3 V = normalize(cameraPosition - vWorldPos);
   vec3 H = normalize(L + V);
   float spec = pow(max(dot(N, H), 0.0), 48.0) * specMask;
-  lit += vec3(spec) * 0.25;
+  lit += vec3(spec) * 0.25 * (1.0 - uFill);
 
   gl_FragColor = vec4(lit, 1.0);
 }
@@ -99,6 +100,7 @@ export const oceanFragmentShader = /* glsl */ `
 uniform vec3 uLightDir;
 uniform vec3 uDeepColor;
 uniform vec3 uShallowColor;
+uniform float uFill;
 
 varying vec3 vNormal;
 varying vec3 vWorldPos;
@@ -112,12 +114,12 @@ void main() {
   vec3 albedo = mix(uDeepColor, uShallowColor, fresnel * 0.65);
 
   float ndl = dot(N, L);
-  float wrap = ndl * 0.5 + 0.5;
+  float wrap = mix(ndl * 0.5 + 0.5, 1.0, uFill);
   vec3 H = normalize(L + V);
-  float spec = pow(max(dot(N, H), 0.0), 80.0);
-  float spec2 = pow(max(dot(N, H), 0.0), 16.0);
+  float spec = pow(max(dot(N, H), 0.0), 80.0) * (1.0 - uFill);
+  float spec2 = pow(max(dot(N, H), 0.0), 16.0) * (1.0 - uFill);
 
-  vec3 lit = albedo * (0.16 + wrap * 0.85);
+  vec3 lit = albedo * mix(0.16 + wrap * 0.85, 1.05, uFill);
   lit += vec3(0.85, 0.92, 1.0) * spec * 0.55;
   lit += uShallowColor * spec2 * 0.12;
   lit += uShallowColor * fresnel * 0.18;
@@ -142,6 +144,7 @@ export const atmosphereFragmentShader = /* glsl */ `
 uniform vec3 uColor;
 uniform float uIntensity;
 uniform vec3 uLightDir;
+uniform float uFill;
 
 varying vec3 vWorldPos;
 varying vec3 vNormal;
@@ -151,6 +154,7 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorldPos);
   float fresnel = pow(1.0 - abs(dot(N, V)), 2.8);
   float sun = clamp(dot(N, normalize(uLightDir)) * 0.5 + 0.5, 0.25, 1.0);
+  sun = mix(sun, 1.0, uFill);
   float alpha = fresnel * uIntensity * sun;
   gl_FragColor = vec4(uColor * alpha, alpha);
 }
@@ -182,6 +186,7 @@ uniform float uSoftness;
 uniform float uOpacity;
 uniform float uStretch;
 uniform float uWarp;
+uniform float uFill;
 
 varying vec3 vNormal;
 varying vec3 vWorldPos;
@@ -259,6 +264,7 @@ void main() {
   vec3 night = uColor * 0.58;
   float terminator = smoothstep(-0.35, 0.25, ndl);
   vec3 lit = mix(night, day, terminator);
+  lit = mix(lit, uColor * 0.95, uFill);
 
   gl_FragColor = vec4(lit, cloud * uOpacity);
 }
@@ -274,6 +280,7 @@ uniform float uTime;
 uniform float uInner;
 uniform float uOuter;
 uniform vec3 uLightDir;
+uniform float uFill;
 
 varying float vKind;
 varying float vIntensity;
@@ -307,7 +314,11 @@ void main() {
   vKind = aKind;
   vIntensity = aIntensity;
   vFade = smoothstep(0.0, 0.1, cycle) * (1.0 - smoothstep(0.84, 1.0, cycle));
-  vSun = clamp(dot(worldDir, normalize(uLightDir)) * 0.45 + 0.55, 0.28, 1.0);
+  vSun = mix(
+    clamp(dot(worldDir, normalize(uLightDir)) * 0.45 + 0.55, 0.28, 1.0),
+    1.0,
+    uFill
+  );
 
   gl_Position = clip;
   float dist = max(length(mv.xyz), 0.2);

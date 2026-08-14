@@ -5,8 +5,13 @@ import {
   oceanVertexShader,
 } from '../shaders/globeShaders'
 import { OCEAN_DEEP, OCEAN_SHALLOW, STAR_DIRECTION } from './lighting'
+import { useFillLight } from './useFillLight'
 
-export function Ocean() {
+type OceanProps = {
+  evenLight: boolean
+}
+
+export function Ocean({ evenLight }: OceanProps) {
   const material = useMemo(
     () =>
       new ShaderMaterial({
@@ -16,10 +21,13 @@ export function Ocean() {
           uLightDir: { value: STAR_DIRECTION.clone() },
           uDeepColor: { value: OCEAN_DEEP.clone() },
           uShallowColor: { value: OCEAN_SHALLOW.clone() },
+          uFill: { value: 0 },
         },
       }),
     [],
   )
+
+  useFillLight(material, evenLight)
 
   return (
     <mesh material={material} name="ocean">

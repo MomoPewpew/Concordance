@@ -6,6 +6,7 @@ import {
   cloudVertexShader,
 } from '../shaders/globeShaders'
 import { CLOUD_COLOR, STAR_DIRECTION } from './lighting'
+import { useFillLight } from './useFillLight'
 
 type CloudLayerProps = {
   seed: number
@@ -18,6 +19,7 @@ type CloudLayerProps = {
   warp: number
   radius: number
   offsetSalt: number
+  evenLight: boolean
 }
 
 function seedOffset(seed: number, salt: number): Vector3 {
@@ -40,6 +42,7 @@ function CloudLayer({
   warp,
   radius,
   offsetSalt,
+  evenLight,
 }: CloudLayerProps) {
   const material = useMemo(
     () =>
@@ -58,6 +61,7 @@ function CloudLayer({
           uOpacity: { value: opacity },
           uStretch: { value: stretch },
           uWarp: { value: warp },
+          uFill: { value: 0 },
         },
         transparent: true,
         depthWrite: false,
@@ -74,6 +78,8 @@ function CloudLayer({
       warp,
     ],
   )
+
+  useFillLight(material, evenLight)
 
   useFrame((state) => {
     material.uniforms.uTime.value = state.clock.elapsedTime
@@ -93,9 +99,10 @@ function CloudLayer({
 
 type CloudsProps = {
   seed: number
+  evenLight: boolean
 }
 
-export function Clouds({ seed }: CloudsProps) {
+export function Clouds({ seed, evenLight }: CloudsProps) {
   return (
     <group name="homosphere-clouds">
       <CloudLayer
@@ -109,6 +116,7 @@ export function Clouds({ seed }: CloudsProps) {
         stretch={1}
         warp={0.55}
         offsetSalt={1}
+        evenLight={evenLight}
       />
       <CloudLayer
         seed={seed}
@@ -121,6 +129,7 @@ export function Clouds({ seed }: CloudsProps) {
         stretch={2.15}
         warp={0.8}
         offsetSalt={7}
+        evenLight={evenLight}
       />
     </group>
   )

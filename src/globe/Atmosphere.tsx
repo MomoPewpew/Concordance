@@ -5,8 +5,13 @@ import {
   atmosphereVertexShader,
 } from '../shaders/globeShaders'
 import { ATMOSPHERE_COLOR, STAR_DIRECTION } from './lighting'
+import { useFillLight } from './useFillLight'
 
-export function Atmosphere() {
+type AtmosphereProps = {
+  evenLight: boolean
+}
+
+export function Atmosphere({ evenLight }: AtmosphereProps) {
   const material = useMemo(
     () =>
       new ShaderMaterial({
@@ -16,6 +21,7 @@ export function Atmosphere() {
           uColor: { value: ATMOSPHERE_COLOR.clone() },
           uIntensity: { value: 0.85 },
           uLightDir: { value: STAR_DIRECTION.clone() },
+          uFill: { value: 0 },
         },
         side: BackSide,
         transparent: true,
@@ -24,6 +30,8 @@ export function Atmosphere() {
       }),
     [],
   )
+
+  useFillLight(material, evenLight)
 
   return (
     <mesh material={material} scale={1.085} name="atmosphere" renderOrder={4}>

@@ -14,9 +14,15 @@ type GlobeSceneProps = {
   world: World
   showSpinAxis: boolean
   dayAngle: number
+  evenLight: boolean
 }
 
-export function GlobeScene({ world, showSpinAxis, dayAngle }: GlobeSceneProps) {
+export function GlobeScene({
+  world,
+  showSpinAxis,
+  dayAngle,
+  evenLight,
+}: GlobeSceneProps) {
   const starPos = useMemo(
     () => STAR_DIRECTION.clone().multiplyScalar(8),
     [],
@@ -32,11 +38,11 @@ export function GlobeScene({ world, showSpinAxis, dayAngle }: GlobeSceneProps) {
       <group rotation={[0, 0, tiltRad]} name="planet">
         <group rotation={[0, dayRad, 0]} name="daylight">
           <SeaLevel />
-          <Ocean />
-          <Terrain params={world.globe} />
-          <Precipitation params={world.globe} />
-          <Clouds seed={world.globe.seed} />
-          <Atmosphere />
+          <Ocean evenLight={evenLight} />
+          <Terrain params={world.globe} evenLight={evenLight} />
+          <Precipitation params={world.globe} evenLight={evenLight} />
+          <Clouds seed={world.globe.seed} evenLight={evenLight} />
+          <Atmosphere evenLight={evenLight} />
         </group>
         {showSpinAxis && <SpinAxis />}
       </group>

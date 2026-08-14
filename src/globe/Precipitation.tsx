@@ -8,12 +8,14 @@ import {
 } from '../shaders/globeShaders'
 import { generatePrecipitation } from '../worldgen/precipitation'
 import { RAIN_COLOR, SNOW_COLOR, STAR_DIRECTION } from './lighting'
+import { useFillLight } from './useFillLight'
 
 type PrecipitationProps = {
   params: GlobeParams
+  evenLight: boolean
 }
 
-export function Precipitation({ params }: PrecipitationProps) {
+export function Precipitation({ params, evenLight }: PrecipitationProps) {
   const geometry = useMemo(() => generatePrecipitation(params), [params])
 
   const material = useMemo(
@@ -28,6 +30,7 @@ export function Precipitation({ params }: PrecipitationProps) {
           uRainColor: { value: RAIN_COLOR.clone() },
           uSnowColor: { value: SNOW_COLOR.clone() },
           uLightDir: { value: STAR_DIRECTION.clone() },
+          uFill: { value: 0 },
         },
         transparent: true,
         depthWrite: false,
@@ -35,6 +38,8 @@ export function Precipitation({ params }: PrecipitationProps) {
       }),
     [],
   )
+
+  useFillLight(material, evenLight)
 
   useFrame((state) => {
     material.uniforms.uTime.value = state.clock.elapsedTime

@@ -9,9 +9,10 @@ type GlobeProps = {
   world: World
   showSpinAxis: boolean
   dayAngle: number
+  evenLight: boolean
 }
 
-export function Globe({ world, showSpinAxis, dayAngle }: GlobeProps) {
+export function Globe({ world, showSpinAxis, dayAngle, evenLight }: GlobeProps) {
   return (
     <Canvas
       camera={{ position: [0, 0.32, 2.35], fov: 42, near: 0.01, far: 500 }}
@@ -29,6 +30,7 @@ export function Globe({ world, showSpinAxis, dayAngle }: GlobeProps) {
         world={world}
         showSpinAxis={showSpinAxis}
         dayAngle={dayAngle}
+        evenLight={evenLight}
       />
       <GlobeControls />
     </Canvas>

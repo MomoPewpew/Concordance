@@ -7,6 +7,8 @@ type ViewMenuProps = {
   onOpenChange: (open: boolean) => void
   showSpinAxis: boolean
   onShowSpinAxisChange: (show: boolean) => void
+  evenLight: boolean
+  onEvenLightChange: (even: boolean) => void
   dayAngle: number
   onDayAngleChange: (angle: number) => void
 }
@@ -16,10 +18,13 @@ export function ViewMenu({
   onOpenChange,
   showSpinAxis,
   onShowSpinAxisChange,
+  evenLight,
+  onEvenLightChange,
   dayAngle,
   onDayAngleChange,
 }: ViewMenuProps) {
-  const toggleId = useId()
+  const spinId = useId()
+  const fillId = useId()
 
   return (
     <div className="chrome-menu">
@@ -34,9 +39,9 @@ export function ViewMenu({
       </button>
       {open && (
         <div className="chrome-panel chrome-panel-wide">
-          <label className="view-menu-item" htmlFor={toggleId}>
+          <label className="view-menu-item" htmlFor={spinId}>
             <input
-              id={toggleId}
+              id={spinId}
               type="checkbox"
               checked={showSpinAxis}
               onChange={(event) => onShowSpinAxisChange(event.target.checked)}
@@ -67,6 +72,20 @@ export function ViewMenu({
               </li>
             </ul>
           )}
+          <label className="view-menu-item" htmlFor={fillId}>
+            <input
+              id={fillId}
+              type="checkbox"
+              checked={evenLight}
+              onChange={(event) => onEvenLightChange(event.target.checked)}
+            />
+            <span className="view-menu-item-text">
+              <span className="view-menu-item-title">Light from all sides</span>
+              <span className="view-menu-item-hint">
+                Fill the night side so the whole globe is readable.
+              </span>
+            </span>
+          </label>
           <SliderField
             label="Daylight"
             hint="Rotate the planet around its spin axis to change which side faces the star"

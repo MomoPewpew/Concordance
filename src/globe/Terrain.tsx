@@ -7,12 +7,14 @@ import {
 } from '../shaders/globeShaders'
 import { generateTerrain } from '../worldgen/generateTerrain'
 import { ROCK_COLOR, SAND_COLOR, SNOW_COLOR, STAR_DIRECTION } from './lighting'
+import { useFillLight } from './useFillLight'
 
 type TerrainProps = {
   params: GlobeParams
+  evenLight: boolean
 }
 
-export function Terrain({ params }: TerrainProps) {
+export function Terrain({ params, evenLight }: TerrainProps) {
   const geometry = useMemo(() => generateTerrain(params), [params])
 
   const material = useMemo(
@@ -25,6 +27,7 @@ export function Terrain({ params }: TerrainProps) {
           uRockColor: { value: ROCK_COLOR.clone() },
           uSandColor: { value: SAND_COLOR.clone() },
           uSnowColor: { value: SNOW_COLOR.clone() },
+          uFill: { value: 0 },
         },
         vertexColors: false,
         polygonOffset: true,
@@ -33,6 +36,8 @@ export function Terrain({ params }: TerrainProps) {
       }),
     [],
   )
+
+  useFillLight(material, evenLight)
 
   return <mesh geometry={geometry} material={material} name="terrain" />
 }
