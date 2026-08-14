@@ -1,5 +1,23 @@
 import type { ClimateSample } from './climate'
-import { srgbToLinear } from './noise'
+import { clamp, srgbToLinear } from './noise'
+
+function mix3(
+  a: [number, number, number],
+  b: [number, number, number],
+  t: number,
+): [number, number, number] {
+  const k = clamp(t, 0, 1)
+  return [
+    a[0] + (b[0] - a[0]) * k,
+    a[1] + (b[1] - a[1]) * k,
+    a[2] + (b[2] - a[2]) * k,
+  ]
+}
+
+function smoother(edge0: number, edge1: number, x: number): number {
+  const t = clamp((x - edge0) / (edge1 - edge0), 0, 1)
+  return t * t * (3 - 2 * t)
+}
 
 export const BIOME = {
   frozenOcean: 'frozen_ocean',
@@ -61,6 +79,73 @@ export const BIOME_COLORS: Record<BiomeId, [number, number, number]> = (() => {
   }
   return out
 })()
+
+/**
+ * Soft land/ocean colors from climate. Keep in sync with `blendBiomeColor`
+ * in `src/shaders/globeShaders.ts`.
+ */
+export function blendBiomeSrgb(
+  continentalness: number,
+  humidity: number,
+  erosion: number,
+  height: number,
+  temperature: number,
+): [number, number, number] {
+  const C = BIOME_SRGB
+  const t = temperature
+  const h = humidity
+  const e = erosion
+
+  if (height <= 0) {
+    let ocean = mix3(C.frozen_ocean, C.cold_ocean, smoother(-0.62, -0.38, t))
+    ocean = mix3(ocean, C.ocean, smoother(-0.32, -0.08, t))
+    return mix3(ocean, C.warm_ocean, smoother(0.28, 0.52, t))
+  }
+
+  const hot = mix3(
+    mix3(C.desert, C.savanna, smoother(-0.16, 0.0, h)),
+    C.jungle,
+    smoother(-0.02, 0.18, h),
+  )
+  let warm = mix3(C.desert, C.plains, smoother(-0.28, -0.08, h))
+  warm = mix3(warm, C.forest, smoother(-0.08, 0.12, h))
+  const swampW =
+    smoother(0.12, 0.28, h) *
+    smoother(-0.02, 0.12, e) *
+    (1 - smoother(0.035, 0.07, height))
+  warm = mix3(warm, C.swamp, swampW)
+  const cool = mix3(C.plains, C.taiga, smoother(-0.08, 0.12, h))
+  const cold = mix3(C.snowy_plains, C.taiga, smoother(-0.22, 0.0, h))
+
+  let low = mix3(C.snowy_plains, cold, smoother(-0.62, -0.42, t))
+  low = mix3(low, cool, smoother(-0.42, -0.22, t))
+  low = mix3(low, warm, smoother(-0.22, 0.08, t))
+  low = mix3(low, hot, smoother(0.18, 0.42, t))
+
+  let highland = mix3(C.meadow, C.grove, 1 - smoother(-0.22, -0.02, t))
+  highland = mix3(highland, C.snowy_slopes, 1 - smoother(-0.52, -0.28, t))
+  const wind =
+    (1 - smoother(-0.36, -0.18, e)) *
+    (1 - smoother(-0.12, 0.05, h)) *
+    smoother(-0.48, -0.28, t)
+  highland = mix3(highland, C.windswept, wind)
+  const peak = mix3(C.stony_peaks, C.frozen_peaks, 1 - smoother(-0.36, -0.08, t))
+
+  const highlandW =
+    (1 - smoother(-0.14, -0.02, e)) *
+    smoother(-0.06, 0.04, continentalness) *
+    smoother(0.01, 0.024, height)
+  const peakW = (1 - smoother(-0.42, -0.22, e)) * smoother(0.018, 0.038, height)
+  const shoreW =
+    (1 - smoother(0.0008, 0.016, height)) *
+    (1 - smoother(-0.12, 0.1, continentalness))
+  let shore = mix3(C.beach, C.snowy_beach, 1 - smoother(-0.38, -0.18, t))
+  shore = mix3(shore, C.stony_shore, 1 - smoother(-0.48, -0.32, e))
+
+  let col = mix3(low, highland, highlandW)
+  col = mix3(col, peak, peakW)
+  return mix3(col, shore, shoreW)
+}
 
 export function pickBiome(
   climate: ClimateSample,

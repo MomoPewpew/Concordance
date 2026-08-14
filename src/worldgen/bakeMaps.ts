@@ -1,5 +1,5 @@
 import type { GlobeParams } from '../data/types'
-import { BIOME_SRGB, pickBiome } from './biomes'
+import { blendBiomeSrgb } from './biomes'
 import {
   createClimateSamplers,
   sampleClimate,
@@ -79,8 +79,13 @@ export function bakeCubeFace(
       const height = heightFromClimate(climate)
       const elevation = height * params.heightScale
       const temperature = applyLapseRate(climate.temperature, elevation)
-      const biome = pickBiome(climate, height, temperature, false)
-      const [r, g, b] = BIOME_SRGB[biome]
+      const [r, g, b] = blendBiomeSrgb(
+        climate.continentalness,
+        climate.humidity,
+        climate.erosion,
+        height,
+        temperature,
+      )
       const i = (y * size + x) * 4
       pixels[i] = toByte(r)
       pixels[i + 1] = toByte(g)

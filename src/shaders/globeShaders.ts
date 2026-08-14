@@ -28,7 +28,7 @@ void main() {
   vLake = aLake;
 
   vec3 radial = normalize(position);
-  float land = step(0.0008, elevation) * (1.0 - aLake);
+  float land = smoothstep(0.0004, 0.0022, elevation) * (1.0 - aLake);
   float micro = (hash13(radial * 48.0 + uSeed) - 0.5) * 0.00072;
   micro += (hash13(radial * 140.0 - uSeed) - 0.5) * 0.00022;
   vec3 pos = position + radial * micro * land;
@@ -109,113 +109,155 @@ vec3 srgb(float r, float g, float b) {
   return mix(lo, hi, step(vec3(0.04045), c));
 }
 
-vec3 pickBiomeColor(float cont, float humidity, float erosion, float height, float t) {
-  if (cont < -0.19 || height <= 0.0) {
-    if (t < -0.5) return srgb(0.78, 0.86, 0.9);
-    if (t < -0.18) return srgb(0.12, 0.28, 0.42);
-    if (t > 0.45) return srgb(0.08, 0.48, 0.62);
-    return srgb(0.08, 0.32, 0.58);
-  }
-  if (height > 0.0 && cont < -0.135) {
-    if (erosion < -0.4) return srgb(0.45, 0.44, 0.4);
-    if (t < -0.28) return srgb(0.89, 0.87, 0.82);
-    return srgb(0.91, 0.82, 0.62);
-  }
-  bool isPeak = erosion < -0.35 && height > 0.03;
-  bool isHighland = erosion < -0.08 && cont > -0.02 && height > 0.018;
-  if (isPeak) {
-    if (t < -0.22) return srgb(0.94, 0.96, 0.97);
-    return srgb(0.58, 0.56, 0.52);
-  }
-  if (isHighland) {
-    if (t < -0.42) return srgb(0.82, 0.86, 0.88);
-    if (t < -0.12) return srgb(0.24, 0.42, 0.28);
-    if (erosion < -0.3 && humidity < 0.0) return srgb(0.52, 0.55, 0.42);
-    return srgb(0.46, 0.66, 0.32);
-  }
-  if (t > 0.32) {
-    if (humidity < -0.08) return srgb(0.86, 0.74, 0.45);
-    if (humidity < 0.08) return srgb(0.74, 0.68, 0.32);
-    return srgb(0.1, 0.36, 0.16);
-  }
-  if (t > 0.0) {
-    if (humidity > 0.22 && erosion > 0.05 && height < 0.05) return srgb(0.3, 0.36, 0.18);
-    if (humidity > 0.02) return srgb(0.18, 0.46, 0.22);
-    if (humidity < -0.18) return srgb(0.86, 0.74, 0.45);
-    return srgb(0.48, 0.68, 0.28);
-  }
-  if (t > -0.32) {
-    if (humidity > 0.0) return srgb(0.22, 0.36, 0.28);
-    return srgb(0.48, 0.68, 0.28);
-  }
-  if (t > -0.52) {
-    return humidity > -0.12 ? srgb(0.22, 0.36, 0.28) : srgb(0.9, 0.93, 0.95);
-  }
-  return srgb(0.9, 0.93, 0.95);
+vec3 blendBiomeColor(float cont, float humidity, float erosion, float height, float t) {
+  vec3 desert = srgb(0.86, 0.74, 0.45);
+  vec3 savanna = srgb(0.74, 0.68, 0.32);
+  vec3 jungle = srgb(0.1, 0.36, 0.16);
+  vec3 plains = srgb(0.48, 0.68, 0.28);
+  vec3 forest = srgb(0.18, 0.46, 0.22);
+  vec3 swamp = srgb(0.3, 0.36, 0.18);
+  vec3 taiga = srgb(0.22, 0.36, 0.28);
+  vec3 snow = srgb(0.9, 0.93, 0.95);
+  vec3 meadow = srgb(0.46, 0.66, 0.32);
+  vec3 grove = srgb(0.24, 0.42, 0.28);
+  vec3 slopes = srgb(0.82, 0.86, 0.88);
+  vec3 wind = srgb(0.52, 0.55, 0.42);
+  vec3 peak = srgb(0.58, 0.56, 0.52);
+  vec3 icePeak = srgb(0.94, 0.96, 0.97);
+  vec3 beach = srgb(0.91, 0.82, 0.62);
+  vec3 snowBeach = srgb(0.89, 0.87, 0.82);
+  vec3 stone = srgb(0.45, 0.44, 0.4);
+
+  vec3 hot = mix(mix(desert, savanna, smoothstep(-0.16, 0.0, humidity)), jungle, smoothstep(-0.02, 0.18, humidity));
+  vec3 warm = mix(desert, plains, smoothstep(-0.28, -0.08, humidity));
+  warm = mix(warm, forest, smoothstep(-0.08, 0.12, humidity));
+  float swampW = smoothstep(0.12, 0.28, humidity) * smoothstep(-0.02, 0.12, erosion) * (1.0 - smoothstep(0.035, 0.07, height));
+  warm = mix(warm, swamp, swampW);
+  vec3 cool = mix(plains, taiga, smoothstep(-0.08, 0.12, humidity));
+  vec3 cold = mix(snow, taiga, smoothstep(-0.22, 0.0, humidity));
+
+  vec3 low = mix(snow, cold, smoothstep(-0.62, -0.42, t));
+  low = mix(low, cool, smoothstep(-0.42, -0.22, t));
+  low = mix(low, warm, smoothstep(-0.22, 0.08, t));
+  low = mix(low, hot, smoothstep(0.18, 0.42, t));
+
+  vec3 highland = mix(meadow, grove, 1.0 - smoothstep(-0.22, -0.02, t));
+  highland = mix(highland, slopes, 1.0 - smoothstep(-0.52, -0.28, t));
+  float windW =
+    (1.0 - smoothstep(-0.36, -0.18, erosion)) *
+    (1.0 - smoothstep(-0.12, 0.05, humidity)) *
+    smoothstep(-0.48, -0.28, t);
+  highland = mix(highland, wind, windW);
+  vec3 peakCol = mix(peak, icePeak, 1.0 - smoothstep(-0.36, -0.08, t));
+
+  float highlandW =
+    (1.0 - smoothstep(-0.14, -0.02, erosion)) *
+    smoothstep(-0.06, 0.04, cont) *
+    smoothstep(0.01, 0.024, height);
+  float peakW = (1.0 - smoothstep(-0.42, -0.22, erosion)) * smoothstep(0.018, 0.038, height);
+  float shoreW =
+    (1.0 - smoothstep(0.0008, 0.016, height)) *
+    (1.0 - smoothstep(-0.12, 0.1, cont));
+  vec3 shore = mix(beach, snowBeach, 1.0 - smoothstep(-0.38, -0.18, t));
+  shore = mix(shore, stone, 1.0 - smoothstep(-0.48, -0.32, erosion));
+
+  vec3 col = mix(low, highland, highlandW);
+  col = mix(col, peakCol, peakW);
+  return mix(col, shore, shoreW);
 }
 
 void main() {
   vec3 radial = normalize(vRadial);
   float dist = length(cameraPosition - vWorldPos);
   float close = 1.0 - smoothstep(0.22, 1.65, dist);
-  float mid = 1.0 - smoothstep(0.7, 2.6, dist);
 
-  float coastN =
-    (vnoise(radial * 72.0 + uSeed) - 0.5) * 0.0012 +
-    (vnoise(radial * 240.0 - uSeed) - 0.5) * 0.00038 * mid;
-  float elevN = vElevation + coastN;
-  if (elevN <= 0.0 && uOverlay < 0.5) discard;
+  vec3 local = normalize(vLocal);
+  float coastWarp =
+    (vnoise(local * 6.2 + uSeed) - 0.5) * 0.0005 +
+    (vnoise(local * 13.5 - uSeed) - 0.5) * 0.0002;
+  float elevN = vElevation + coastWarp;
+  float aa = max(fwidth(elevN), 0.00016);
+  if (elevN < -aa * 2.8 && uOverlay < 0.5) discard;
+  float landCover = smoothstep(-aa * 1.4, aa * 2.4, elevN);
 
   vec3 N = normalize(vNormal);
   vec3 dPdx = dFdx(vWorldPos);
   vec3 dPdy = dFdy(vWorldPos);
   vec3 geoN = normalize(cross(dPdx, dPdy));
   if (dot(geoN, N) < 0.0) geoN = -geoN;
-  N = normalize(mix(N, geoN, 0.32));
+  N = normalize(mix(N, geoN, 0.32 * landCover));
 
   float slope = 1.0 - clamp(dot(N, radial), 0.0, 1.0);
 
   float height = vElevation / max(uHeightScale, 1.0e-5);
-  vec3 local = normalize(vLocal);
 
-  float nLo = fbm(radial * mix(22.0, 52.0, close) + uSeed, close);
-  float nMid = fbm(radial * mix(55.0, 130.0, close) - uSeed, close);
-  float nHi = fbm(radial * mix(110.0, 260.0, close) + uSeed * 1.31, 1.0);
+  float nLo = fbm(local * 16.0 + uSeed, 0.45);
+  float nMid = fbm(local * 31.0 - uSeed, 0.45);
+  float nHi = fbm(local * 48.0 + uSeed * 1.31, 0.3);
+  float nPatch = fbm(local * 11.0 + uSeed * 2.05, 0.5);
+  float nDune = fbm(local * 19.0 + 8.4, 0.5);
   vec3 warp = vec3(nLo, nMid, nHi) - 0.5;
-  float warpAmp = mix(0.038, 0.11, close);
-  float cont = vClimate.x + warp.x * warpAmp * 0.5;
-  float hum = vClimate.y + warp.y * warpAmp * 1.15;
-  float ero = vClimate.z + warp.z * warpAmp * 0.6;
-  float temp = vTemperature + warp.x * warpAmp * 0.7 + warp.z * warpAmp * 0.22;
+  float warpAmp = mix(0.04, 0.12, close);
+  float cont = vClimate.x + warp.x * warpAmp * 0.55;
+  float hum = vClimate.y + warp.y * warpAmp * 1.45;
+  float ero = vClimate.z + warp.z * warpAmp * 0.7;
+  float temp = vTemperature + warp.x * warpAmp * 0.75 + warp.z * warpAmp * 0.28;
 
-  vec3 colA = pickBiomeColor(cont, hum, ero, height, temp);
-  vec3 colB = pickBiomeColor(
-    cont + warp.y * 0.06,
+  vec3 colA = blendBiomeColor(cont, hum, ero, height, temp);
+  vec3 colB = blendBiomeColor(
+    cont + warp.y * 0.05,
     hum + warp.z * 0.09,
-    ero + warp.x * 0.045,
+    ero + warp.x * 0.04,
     height,
-    temp + warp.y * 0.055
+    temp + warp.y * 0.045
   );
-  float dither = smoothstep(0.26, 0.74, nHi * 0.62 + nMid * 0.38);
-  vec3 col = mix(colA, colB, dither * mix(0.42, 0.78, close));
+  float dither = smoothstep(0.18, 0.82, nMid * 0.65 + nPatch * 0.35);
+  vec3 col = mix(colA, colB, dither * mix(0.18, 0.38, close));
 
   if (uHasMaps > 0.5 && uOverlay < 0.5) {
-    vec3 w1 = warp * mix(0.0036, 0.012, close);
+    vec3 w1 = warp * 0.007;
     vec4 baked = textureCube(uMaps, normalize(local + w1));
-    if (baked.a > 0.502) {
+    if (baked.a > 0.45) {
       vec3 b0 = srgb(baked.r, baked.g, baked.b);
       vec4 baked2 = textureCube(
         uMaps,
         normalize(local + vec3(w1.y, w1.z, -w1.x) * 1.45)
       );
       vec3 b1 = srgb(baked2.r, baked2.g, baked2.b);
-      float edge = clamp(length(b0 - b1) * 3.6 + length(b0 - colA) * 1.5, 0.0, 1.0);
-      vec3 noisy = mix(b0, mix(col, b1, dither), nMid);
-      col = mix(b0, noisy, edge);
+      vec3 bAvg = mix(b0, b1, 0.38);
+      float edge = clamp(length(b0 - b1) * 2.2, 0.0, 1.0);
+      vec3 noisy = mix(bAvg, col, mix(0.12, 0.38, nMid));
+      float leak = mix(0.16, 0.4, close);
+      float bakeW = smoothstep(0.5, 0.64, baked.a);
+      col = mix(col, mix(bAvg, noisy, max(edge, leak)), bakeW);
     }
   }
+
+  float sandAmt =
+    smoothstep(0.04, 0.48, temp) *
+    (1.0 - smoothstep(-0.38, 0.18, hum)) *
+    smoothstep(0.0005, 0.003, elevN);
+  float grassAmt =
+    smoothstep(-0.42, 0.18, temp) *
+    smoothstep(-0.42, 0.28, hum) *
+    smoothstep(-0.17, 0.02, vClimate.x) *
+    smoothstep(0.0005, 0.003, elevN);
+  grassAmt *= 1.0 - sandAmt * 0.7;
+
+  vec3 sandCol = mix(srgb(0.86, 0.74, 0.45), srgb(0.76, 0.54, 0.32), nDune);
+  sandCol = mix(sandCol, srgb(0.93, 0.85, 0.66), smoothstep(0.25, 0.8, nMid));
+  sandCol = mix(sandCol, srgb(0.6, 0.5, 0.36), smoothstep(0.55, 0.88, nPatch) * 0.45);
+  vec3 grassCol = mix(srgb(0.48, 0.68, 0.28), srgb(0.18, 0.44, 0.18), nPatch);
+  grassCol = mix(grassCol, srgb(0.58, 0.62, 0.28), (1.0 - smoothstep(-0.22, 0.05, hum)) * smoothstep(0.2, 0.75, nMid));
+  grassCol = mix(grassCol, srgb(0.34, 0.3, 0.18), nHi * nHi * 0.28);
+
+  col = mix(col, sandCol, sandAmt * mix(0.18, 0.42, close) * (0.4 + nDune * 0.6));
+  col = mix(col, grassCol, grassAmt * mix(0.2, 0.48, close) * (0.38 + nPatch * 0.62));
+
   col = mix(col, srgb(0.12, 0.42, 0.48), smoothstep(0.25, 0.75, vLake));
-  col *= 1.0 + (nLo - 0.5) * mix(0.05, 0.14, close);
+  float lakeEdge = 4.0 * vLake * (1.0 - vLake);
+  col = mix(col, sandCol, lakeEdge * 0.4);
+  col *= 1.0 + (nLo - 0.5) * mix(0.04, 0.1, close);
 
   float landMask = smoothstep(0.0004, 0.003, elevN);
   float wet = smoothstep(-0.38, 0.08, vClimate.y);
@@ -254,8 +296,7 @@ void main() {
     col = mix(col, waterCol, fresh);
   }
 
-  float bumpFreq = mix(22.0, 96.0, close);
-  vec3 bp = radial * bumpFreq + uSeed;
+  vec3 bp = local * 28.0 + uSeed;
   float eps = 0.035;
   vec3 grad = vec3(
     vnoise(bp + vec3(eps, 0.0, 0.0)) - vnoise(bp - vec3(eps, 0.0, 0.0)),
@@ -265,21 +306,31 @@ void main() {
   float dry = smoothstep(0.05, -0.2, vClimate.y);
   float bumpAmp = mix(0.1, 0.55, close) * (0.35 + slope * 1.4 + dry * 0.5);
   bumpAmp *= 1.0 - fresh * 0.92;
+  bumpAmp *= mix(0.15, 1.0, landCover);
   N = normalize(N + (grad - radial * dot(grad, radial)) * bumpAmp);
   N = normalize(mix(N, radial, fresh * 0.62));
 
   slope = 1.0 - clamp(dot(N, radial), 0.0, 1.0);
 
-  float rockMix = smoothstep(0.12, 0.42, slope) * (1.0 - fresh);
+  float rockMix = smoothstep(0.12, 0.42, slope) * (1.0 - fresh) * landCover;
   col = mix(col, uRockColor, rockMix * 0.92);
 
-  float beach = (1.0 - smoothstep(0.0, 0.0035, elevN)) * (1.0 - rockMix);
-  beach *= smoothstep(-0.22, 0.08, vTemperature) * (1.0 - fresh);
-  col = mix(col, uSandColor, beach);
+  vec3 wetSand = mix(srgb(0.62, 0.52, 0.38), sandCol, 0.55);
+  vec3 drySand = mix(sandCol, srgb(0.91, 0.82, 0.62), 0.35);
+  float beach = (1.0 - smoothstep(0.0004, 0.0085, elevN)) * (1.0 - rockMix);
+  beach *= smoothstep(-0.28, 0.12, vTemperature) * (1.0 - fresh);
+  col = mix(col, mix(wetSand, drySand, smoothstep(0.0006, 0.005, elevN)), beach * 0.92);
 
-  float foam = (1.0 - smoothstep(0.0, 0.0016, elevN)) * (1.0 - rockMix);
+  float foam = (1.0 - smoothstep(0.0, 0.0028, elevN)) * (1.0 - rockMix);
   foam *= smoothstep(-0.15, 0.2, vTemperature) * (1.0 - fresh * 0.5);
-  col = mix(col, vec3(0.82, 0.9, 0.92), foam * 0.45);
+  foam *= landCover * mix(0.35, 1.0, 1.0 - landCover);
+  col = mix(col, vec3(0.82, 0.9, 0.92), foam * 0.4);
+
+  vec3 shoreWater = mix(srgb(0.12, 0.42, 0.55), srgb(0.18, 0.5, 0.58), 0.35);
+  shoreWater = mix(shoreWater, srgb(0.72, 0.84, 0.9), frozen);
+  if (uOverlay < 0.5) {
+    col = mix(shoreWater, col, landCover);
+  }
 
   float snowTemp = smoothstep(0.08, -0.28, vTemperature);
   float snowHeight = smoothstep(0.02, 0.04, vElevation);
@@ -288,8 +339,8 @@ void main() {
   snow *= 1.0 - fresh * (1.0 - frozen);
   col = mix(col, uSnowColor, clamp(snow * snowSlope, 0.0, 1.0) * 0.9);
 
-  float grain = fbm(vWorldPos * mix(40.0, 180.0, close) + uSeed, close);
-  col *= 0.93 + grain * mix(0.08, 0.16, close) * (1.0 - fresh * 0.65);
+  float grain = fbm(local * 42.0 + uSeed, 0.3);
+  col *= 0.95 + grain * mix(0.04, 0.09, close) * (1.0 - fresh * 0.65);
 
   float t = clamp(vTemperature * 0.5 + 0.5, 0.0, 1.0);
   vec3 tempCol = mix(vec3(0.12, 0.28, 0.85), vec3(0.95, 0.95, 0.98), smoothstep(0.0, 0.5, t));

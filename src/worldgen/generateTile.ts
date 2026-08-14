@@ -36,8 +36,6 @@ export type TileMeshData = {
   lakeIndices: Uint32Array | null
 }
 
-const MIN_LAND = 0.0014
-
 export function generateTile(
   params: GlobeParams,
   face: number,
@@ -215,9 +213,7 @@ export function generateTile(
     const isSkirtBot = i >= surfaceCount && i < surfaceCount + skirtRing
     const displaced = lakeFlags[src]
       ? lakeRadius[src] - 1 - 0.0009
-      : elevation > params.seaLevel
-        ? Math.max(elevation, MIN_LAND)
-        : elevation
+      : elevation
     const radius = 1 + displaced - (isSkirtBot ? SKIRT_DROP : 0)
     positions[i * 3] = sphereX[i] * radius
     positions[i * 3 + 1] = sphereY[i] * radius
