@@ -34,7 +34,7 @@ function vertKey(x: number, y: number, z: number): string {
 }
 
 function cacheKey(params: GlobeParams): string {
-  return `v3:${JSON.stringify(params, (key, value) =>
+  return `v4:${JSON.stringify(params, (key, value) =>
     key === 'axialTilt' || key === 'flattening' ? undefined : value,
   )}`
 }
@@ -204,6 +204,10 @@ export function generateGlobeMeshes(params: GlobeParams): GlobeMeshes {
   geometry.setAttribute(
     'biomeColor',
     new BufferAttribute(new Float32Array(colors), 3),
+  )
+  geometry.setAttribute(
+    'aLake',
+    new BufferAttribute(new Float32Array(lakeFlags), 1),
   )
   geometry.setIndex(indices)
   geometry.computeVertexNormals()

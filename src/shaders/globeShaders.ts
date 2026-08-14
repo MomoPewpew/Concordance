@@ -1,26 +1,42 @@
 export const terrainVertexShader = /* glsl */ `
 attribute float elevation;
 attribute float temperature;
-attribute vec3 biomeColor;
 attribute vec3 aClimate;
+attribute float aLake;
+
+uniform float uSeed;
 
 varying vec3 vNormal;
-varying vec3 vColor;
 varying vec3 vWorldPos;
 varying vec3 vRadial;
+varying vec3 vLocal;
 varying float vElevation;
 varying float vTemperature;
 varying vec3 vClimate;
+varying float vLake;
+
+float hash13(vec3 p) {
+  p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
+  p *= 17.0;
+  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
 
 void main() {
-  vColor = biomeColor;
   vElevation = elevation;
   vTemperature = temperature;
   vClimate = aClimate;
+  vLake = aLake;
+
   vec3 radial = normalize(position);
+  float land = step(0.0008, elevation) * (1.0 - aLake);
+  float micro = (hash13(radial * 48.0 + uSeed) - 0.5) * 0.00072;
+  micro += (hash13(radial * 140.0 - uSeed) - 0.5) * 0.00022;
+  vec3 pos = position + radial * micro * land;
+
+  vLocal = radial;
   vRadial = normalize(mat3(modelMatrix) * radial);
   vNormal = normalize(mat3(modelMatrix) * normal);
-  vec4 world = modelMatrix * vec4(position, 1.0);
+  vec4 world = modelMatrix * vec4(pos, 1.0);
   vWorldPos = world.xyz;
   gl_Position = projectionMatrix * viewMatrix * world;
 }
@@ -33,14 +49,20 @@ uniform vec3 uSandColor;
 uniform vec3 uSnowColor;
 uniform float uFill;
 uniform float uOverlay;
+uniform float uHeightScale;
+uniform float uSeed;
+uniform samplerCube uMaps;
+uniform float uHasMaps;
+uniform float uMapSize;
 
 varying vec3 vNormal;
-varying vec3 vColor;
 varying vec3 vWorldPos;
 varying vec3 vRadial;
+varying vec3 vLocal;
 varying float vElevation;
 varying float vTemperature;
 varying vec3 vClimate;
+varying float vLake;
 
 float hash13(vec3 p) {
   p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
@@ -48,21 +70,157 @@ float hash13(vec3 p) {
   return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
 }
 
+float vnoise(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(
+      mix(hash13(i), hash13(i + vec3(1.0, 0.0, 0.0)), f.x),
+      mix(hash13(i + vec3(0.0, 1.0, 0.0)), hash13(i + vec3(1.0, 1.0, 0.0)), f.x),
+      f.y
+    ),
+    mix(
+      mix(hash13(i + vec3(0.0, 0.0, 1.0)), hash13(i + vec3(1.0, 0.0, 1.0)), f.x),
+      mix(hash13(i + vec3(0.0, 1.0, 1.0)), hash13(i + vec3(1.0, 1.0, 1.0)), f.x),
+      f.y
+    ),
+    f.z
+  );
+}
+
+float fbm(vec3 p, float extra) {
+  float a = 0.5 * vnoise(p);
+  a += 0.25 * vnoise(p * 2.03);
+  a += 0.125 * vnoise(p * 4.07);
+  a += extra * 0.0625 * vnoise(p * 8.13);
+  return a;
+}
+
+vec3 srgb(float r, float g, float b) {
+  vec3 c = vec3(r, g, b);
+  vec3 lo = c / 12.92;
+  vec3 hi = pow((c + 0.055) / 1.055, vec3(2.4));
+  return mix(lo, hi, step(vec3(0.04045), c));
+}
+
+vec3 pickBiomeColor(float cont, float humidity, float erosion, float height, float t) {
+  if (cont < -0.19 || height <= 0.0) {
+    if (t < -0.5) return srgb(0.78, 0.86, 0.9);
+    if (t < -0.18) return srgb(0.12, 0.28, 0.42);
+    if (t > 0.45) return srgb(0.08, 0.48, 0.62);
+    return srgb(0.08, 0.32, 0.58);
+  }
+  if (height > 0.0 && cont < -0.135) {
+    if (erosion < -0.4) return srgb(0.45, 0.44, 0.4);
+    if (t < -0.28) return srgb(0.89, 0.87, 0.82);
+    return srgb(0.91, 0.82, 0.62);
+  }
+  bool isPeak = erosion < -0.35 && height > 0.03;
+  bool isHighland = erosion < -0.08 && cont > -0.02 && height > 0.018;
+  if (isPeak) {
+    if (t < -0.22) return srgb(0.94, 0.96, 0.97);
+    return srgb(0.58, 0.56, 0.52);
+  }
+  if (isHighland) {
+    if (t < -0.42) return srgb(0.82, 0.86, 0.88);
+    if (t < -0.12) return srgb(0.24, 0.42, 0.28);
+    if (erosion < -0.3 && humidity < 0.0) return srgb(0.52, 0.55, 0.42);
+    return srgb(0.46, 0.66, 0.32);
+  }
+  if (t > 0.32) {
+    if (humidity < -0.08) return srgb(0.86, 0.74, 0.45);
+    if (humidity < 0.08) return srgb(0.74, 0.68, 0.32);
+    return srgb(0.1, 0.36, 0.16);
+  }
+  if (t > 0.0) {
+    if (humidity > 0.22 && erosion > 0.05 && height < 0.05) return srgb(0.3, 0.36, 0.18);
+    if (humidity > 0.02) return srgb(0.18, 0.46, 0.22);
+    if (humidity < -0.18) return srgb(0.86, 0.74, 0.45);
+    return srgb(0.48, 0.68, 0.28);
+  }
+  if (t > -0.32) {
+    if (humidity > 0.0) return srgb(0.22, 0.36, 0.28);
+    return srgb(0.48, 0.68, 0.28);
+  }
+  if (t > -0.52) {
+    return humidity > -0.12 ? srgb(0.22, 0.36, 0.28) : srgb(0.9, 0.93, 0.95);
+  }
+  return srgb(0.9, 0.93, 0.95);
+}
+
 void main() {
-  if (vElevation <= 0.0 && uOverlay < 0.5) discard;
+  vec3 radial = normalize(vRadial);
+  float dist = length(cameraPosition - vWorldPos);
+  float close = 1.0 - smoothstep(0.22, 1.65, dist);
+  float mid = 1.0 - smoothstep(0.7, 2.6, dist);
+
+  float coastN =
+    (vnoise(radial * 72.0 + uSeed) - 0.5) * 0.0012 +
+    (vnoise(radial * 240.0 - uSeed) - 0.5) * 0.00038 * mid;
+  float elevN = vElevation + coastN;
+  if (elevN <= 0.0 && uOverlay < 0.5) discard;
 
   vec3 N = normalize(vNormal);
-  vec3 radial = normalize(vRadial);
+  vec3 dPdx = dFdx(vWorldPos);
+  vec3 dPdy = dFdy(vWorldPos);
+  vec3 geoN = normalize(cross(dPdx, dPdy));
+  if (dot(geoN, N) < 0.0) geoN = -geoN;
+  N = normalize(mix(N, geoN, 0.32));
+
   float slope = 1.0 - clamp(dot(N, radial), 0.0, 1.0);
 
-  vec3 col = vColor;
+  float height = vElevation / max(uHeightScale, 1.0e-5);
+  float mottling = (fbm(radial * 28.0 + uSeed, close) - 0.5) * mix(0.012, 0.045, close);
+  vec3 local = normalize(vLocal);
+  vec3 col = pickBiomeColor(
+    vClimate.x,
+    vClimate.y + mottling * 0.35,
+    vClimate.z,
+    height,
+    vTemperature + mottling * 0.2
+  );
+  col = mix(col, srgb(0.12, 0.42, 0.48), smoothstep(0.25, 0.75, vLake));
+  if (uHasMaps > 0.5 && uOverlay < 0.5) {
+    vec4 baked = textureCube(uMaps, local);
+    col = baked.rgb;
+    vec3 up = abs(local.y) > 0.94 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
+    vec3 t1 = normalize(cross(up, local));
+    vec3 t2 = normalize(cross(local, t1));
+    float texel = 2.0 / max(uMapSize, 1.0);
+    float hx =
+      textureCube(uMaps, normalize(local + t1 * texel)).a -
+      textureCube(uMaps, normalize(local - t1 * texel)).a;
+    float hy =
+      textureCube(uMaps, normalize(local + t2 * texel)).a -
+      textureCube(uMaps, normalize(local - t2 * texel)).a;
+    N = normalize(N - (t1 * hx + t2 * hy) * 16.0);
+  }
+
+  float bumpFreq = mix(22.0, 96.0, close);
+  vec3 bp = radial * bumpFreq + uSeed;
+  float eps = 0.035;
+  vec3 grad = vec3(
+    vnoise(bp + vec3(eps, 0.0, 0.0)) - vnoise(bp - vec3(eps, 0.0, 0.0)),
+    vnoise(bp + vec3(0.0, eps, 0.0)) - vnoise(bp - vec3(0.0, eps, 0.0)),
+    vnoise(bp + vec3(0.0, 0.0, eps)) - vnoise(bp - vec3(0.0, 0.0, eps))
+  );
+  float dry = smoothstep(0.05, -0.2, vClimate.y);
+  float bumpAmp = mix(0.1, 0.55, close) * (0.35 + slope * 1.4 + dry * 0.5);
+  N = normalize(N + (grad - radial * dot(grad, radial)) * bumpAmp);
+
+  slope = 1.0 - clamp(dot(N, radial), 0.0, 1.0);
 
   float rockMix = smoothstep(0.12, 0.42, slope);
   col = mix(col, uRockColor, rockMix * 0.92);
 
-  float beach = (1.0 - smoothstep(0.0, 0.0035, vElevation)) * (1.0 - rockMix);
+  float beach = (1.0 - smoothstep(0.0, 0.0035, elevN)) * (1.0 - rockMix);
   beach *= smoothstep(-0.22, 0.08, vTemperature);
   col = mix(col, uSandColor, beach);
+
+  float foam = (1.0 - smoothstep(0.0, 0.0016, elevN)) * (1.0 - rockMix);
+  foam *= smoothstep(-0.15, 0.2, vTemperature);
+  col = mix(col, vec3(0.82, 0.9, 0.92), foam * 0.45);
 
   float snowTemp = smoothstep(0.08, -0.28, vTemperature);
   float snowHeight = smoothstep(0.02, 0.04, vElevation);
@@ -70,8 +228,8 @@ void main() {
   float snow = max(snowTemp * snowHeight, snowTemp * 0.35 * smoothstep(0.008, 0.03, vElevation));
   col = mix(col, uSnowColor, clamp(snow * snowSlope, 0.0, 1.0) * 0.9);
 
-  float grain = hash13(vWorldPos * 90.0);
-  col *= 0.955 + grain * 0.09;
+  float grain = fbm(vWorldPos * mix(40.0, 180.0, close) + uSeed, close);
+  col *= 0.93 + grain * mix(0.08, 0.16, close);
 
   float t = clamp(vTemperature * 0.5 + 0.5, 0.0, 1.0);
   vec3 tempCol = mix(vec3(0.12, 0.28, 0.85), vec3(0.95, 0.95, 0.98), smoothstep(0.0, 0.5, t));
