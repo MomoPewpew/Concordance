@@ -379,8 +379,10 @@ void main() {
 export const oceanVertexShader = /* glsl */ `
 varying vec3 vNormal;
 varying vec3 vWorldPos;
+varying vec3 vLocal;
 
 void main() {
+  vLocal = normalize(position);
   vNormal = normalize(mat3(modelMatrix) * normal);
   vec4 world = modelMatrix * vec4(position, 1.0);
   vWorldPos = world.xyz;
@@ -393,9 +395,43 @@ uniform vec3 uLightDir;
 uniform vec3 uDeepColor;
 uniform vec3 uShallowColor;
 uniform float uFill;
+uniform float uTime;
 
 varying vec3 vNormal;
 varying vec3 vWorldPos;
+varying vec3 vLocal;
+
+float hash13(vec3 p) {
+  p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
+  p *= 17.0;
+  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+
+float vnoise(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(
+      mix(hash13(i), hash13(i + vec3(1.0, 0.0, 0.0)), f.x),
+      mix(hash13(i + vec3(0.0, 1.0, 0.0)), hash13(i + vec3(1.0, 1.0, 0.0)), f.x),
+      f.y
+    ),
+    mix(
+      mix(hash13(i + vec3(0.0, 0.0, 1.0)), hash13(i + vec3(1.0, 0.0, 1.0)), f.x),
+      mix(hash13(i + vec3(0.0, 1.0, 1.0)), hash13(i + vec3(1.0, 1.0, 1.0)), f.x),
+      f.y
+    ),
+    f.z
+  );
+}
+
+vec3 rollAround(vec3 p, vec3 axis, float a) {
+  axis = normalize(axis);
+  float c = cos(a);
+  float s = sin(a);
+  return p * c + cross(axis, p) * s + axis * dot(axis, p) * (1.0 - c);
+}
 
 void main() {
   vec3 N = normalize(vNormal);
@@ -415,6 +451,39 @@ void main() {
   lit += vec3(0.85, 0.92, 1.0) * spec * 0.55;
   lit += uShallowColor * spec2 * 0.12;
   lit += uShallowColor * fresnel * 0.18;
+
+  vec3 roll = rollAround(normalize(vLocal), vec3(0.18, 0.96, 0.22), uTime * 0.00522);
+  roll = rollAround(roll, vec3(0.92, 0.12, 0.38), uTime * 0.00192);
+  vec3 warp = roll + vec3(
+    vnoise(roll * 3.1) - 0.5,
+    vnoise(roll * 3.1 + 11.0) - 0.5,
+    vnoise(roll * 3.1 + 19.0) - 0.5
+  ) * 0.62;
+  float ridgeA = abs(vnoise(warp * 9.2) - 0.5);
+  float ridgeB = abs(vnoise(warp * 13.4 + 21.0) - 0.5);
+  float snake = max(
+    1.0 - smoothstep(0.018, 0.07, ridgeA),
+    (1.0 - smoothstep(0.016, 0.055, ridgeB)) * 0.85
+  );
+  float holes = smoothstep(0.28, 0.52, vnoise(roll * 16.0 + 4.8));
+  snake *= holes;
+
+  vec3 grid = roll * 168.0;
+  vec3 cell = floor(grid);
+  float id = hash13(cell);
+  float disc = 1.0 - smoothstep(0.04, 0.13, length(fract(grid) - 0.5));
+  float cycle = mix(0.35, 1.4, hash13(cell + vec3(2.1, 0.4, 8.8)));
+  float duty = mix(0.2, 0.65, hash13(cell + vec3(0.7, 5.2, 1.3)));
+  float blink = step(duty, fract(uTime / cycle + hash13(cell + 9.4)));
+  float spark = pow(id, 5.0) * disc * blink;
+  float facing = clamp(dot(N, V) * 0.35 + 0.65, 0.0, 1.0);
+  float sunGlint = pow(max(dot(N, normalize(L + V)), 0.0), 14.0);
+  float moonGlint = pow(max(dot(N, normalize(-L + V)), 0.0), 12.0);
+  float bounce = facing * (0.45 + sunGlint + moonGlint * 0.85);
+  float glitter = snake * spark * bounce;
+  float dist = length(cameraPosition - vWorldPos);
+  glitter *= 1.0 - smoothstep(0.58, 1.18, dist);
+  lit += vec3(0.92, 0.97, 1.0) * glitter * 5.2;
 
   gl_FragColor = vec4(lit, 1.0);
 }

@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { useEffect, useMemo } from 'react'
 import { ShaderMaterial } from 'three'
 import {
   oceanFragmentShader,
@@ -22,12 +23,24 @@ export function Ocean({ evenLight }: OceanProps) {
           uDeepColor: { value: OCEAN_DEEP.clone() },
           uShallowColor: { value: OCEAN_SHALLOW.clone() },
           uFill: { value: 0 },
+          uTime: { value: 0 },
         },
       }),
-    [],
+    [oceanFragmentShader, oceanVertexShader],
   )
 
   useFillLight(material, evenLight)
+
+  useFrame((state) => {
+    material.uniforms.uTime.value = state.clock.elapsedTime
+  })
+
+  useEffect(
+    () => () => {
+      material.dispose()
+    },
+    [material],
+  )
 
   return (
     <mesh material={material} name="ocean">

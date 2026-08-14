@@ -1,3 +1,4 @@
+import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo } from 'react'
 import { ShaderMaterial } from 'three'
 import {
@@ -24,12 +25,17 @@ export function Lakes({ tiles, evenLight }: LakesProps) {
           uDeepColor: { value: LAKE_DEEP.clone() },
           uShallowColor: { value: LAKE_SHALLOW.clone() },
           uFill: { value: 0 },
+          uTime: { value: 0 },
         },
       }),
-    [],
+    [oceanFragmentShader, oceanVertexShader],
   )
 
   useFillLight(material, evenLight)
+
+  useFrame((state) => {
+    material.uniforms.uTime.value = state.clock.elapsedTime
+  })
 
   useEffect(() => {
     return () => {
