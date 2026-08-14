@@ -6,9 +6,12 @@ type RandomiserMenuProps = {
   onOpenChange: (open: boolean) => void
   settings: RandomiserSettings
   onSettingsChange: (settings: RandomiserSettings) => void
-  seed: number
+  seedDraft: string
+  onSeedDraftChange: (seed: string) => void
   generating: boolean
   onGenerate: () => void
+  onRebuild: () => void
+  onCopySeed: () => void
 }
 
 function percent(value: number): string {
@@ -20,9 +23,12 @@ export function RandomiserMenu({
   onOpenChange,
   settings,
   onSettingsChange,
-  seed,
+  seedDraft,
+  onSeedDraftChange,
   generating,
   onGenerate,
+  onRebuild,
+  onCopySeed,
 }: RandomiserMenuProps) {
   const patch = (partial: Partial<RandomiserSettings>) => {
     onSettingsChange({ ...settings, ...partial })
@@ -112,15 +118,38 @@ export function RandomiserMenu({
             onChange={(resolution) => patch({ resolution })}
           />
           <div className="randomiser-footer">
-            <span className="randomiser-seed">Seed {seed}</span>
-            <button
-              type="button"
-              className="randomiser-generate"
-              disabled={generating}
-              onClick={onGenerate}
-            >
-              {generating ? 'Generating…' : 'Generate world'}
-            </button>
+            <label className="randomiser-seed-field">
+              <span>Seed</span>
+              <span className="randomiser-seed-row">
+                <input
+                  value={seedDraft}
+                  onChange={(event) => onSeedDraftChange(event.target.value)}
+                  inputMode="numeric"
+                  spellCheck={false}
+                />
+                <button type="button" onClick={onCopySeed}>
+                  Copy
+                </button>
+              </span>
+            </label>
+            <div className="randomiser-actions">
+              <button
+                type="button"
+                className="randomiser-generate randomiser-generate-secondary"
+                disabled={generating}
+                onClick={onRebuild}
+              >
+                Rebuild
+              </button>
+              <button
+                type="button"
+                className="randomiser-generate"
+                disabled={generating}
+                onClick={onGenerate}
+              >
+                {generating ? 'Generating…' : 'New seed'}
+              </button>
+            </div>
           </div>
         </div>
       )}

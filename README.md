@@ -2,7 +2,7 @@
 
 A worldbuilding tool. This repo is the first proof of concept: a 3D globe viewer. If the planet does not look compelling on spin and zoom, there is no product yet.
 
-Later, Concordance is meant to hold hyperlinked articles about a world, pinned onto the globe. Users will authenticate and keep multiple **universes**, each with one or more **worlds**. None of that is built here. The data types already assume it.
+Later, Concordance is meant to hold hyperlinked articles about a world, pinned onto the globe. Users will authenticate and keep multiple **universes**, each with one or more **worlds**. See [ROADMAP.md](ROADMAP.md) for what we are building next.
 
 ## Run
 
@@ -24,8 +24,9 @@ npm run lint    # oxlint
 - Height-displaced land on a cube-sphere, ocean at a spherical sea level, fresnel atmosphere, homosphere clouds
 - Biomes from Minecraft 1.18-style climate: continentalness, erosion, weirdness, temperature, humidity
 - Land shading from biome, slope, and elevation (beaches, rock, snow)
-- **View** menu: toggle the planet spin axis and the orbital axis (they split when the world has axial tilt)
-- **Randomiser** menu: set tilt, oceans, mountains, continent size, roughness, climate variation, then generate a new seeded world
+- **View** menu: spin/orbit axes, even lighting, daylight, climate overlays, view presets
+- **Randomiser** menu: tilt, oceans, mountains, continents, roughness, climate, resolution, seed
+- Click the surface to drop a pin; an article stub docks on the right
 
 ## Worldgen
 
@@ -40,7 +41,7 @@ User → Universe[] → World[] → GlobeParams
                  ↘ Article[] (optional pin: world + lat/lon)
 ```
 
-Articles, auth, persistence, and pinning are type-only. Default is one world per universe.
+Articles, auth, persistence, and a full editor are still ahead. Pins and article stubs exist in the POC. Default is one world per universe.
 
 ## Layout
 
@@ -50,9 +51,9 @@ src/
   worldgen/    noise, climate, height, biomes, mesh
   shaders/     terrain, ocean, atmosphere, clouds
   data/        types, sample world, randomiser mappings
-  ui/          View and Randomiser menus
+  ui/          View, Randomiser, article dock
 ```
 
 ## Out of scope
 
-Auth, article editor, hyperlinks, pins, multi-world UI, persistence, planetary LOD, non-spherical sea level.
+Auth, full article editor, hyperlinks, multi-world UI, persistence, planetary LOD, non-spherical sea level (see the roadmap).

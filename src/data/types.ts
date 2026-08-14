@@ -50,14 +50,14 @@ export type GlobeParams = {
   humidity: NoiseLayer
 }
 
-/** Future article pin on a world. Lat/lon in degrees. */
+/** Pin on a world. Lat/lon in degrees. */
 export type ArticlePin = {
   worldId: string
   lat: number
   lon: number
 }
 
-/** Future hyperlinked article. Type-only in this POC. */
+/** Hyperlinked article stub. Persistence and wiki editing come later. */
 export type Article = {
   id: string
   universeId: string

@@ -2,6 +2,7 @@ export const terrainVertexShader = /* glsl */ `
 attribute float elevation;
 attribute float temperature;
 attribute vec3 biomeColor;
+attribute vec3 aClimate;
 
 varying vec3 vNormal;
 varying vec3 vColor;
@@ -9,11 +10,13 @@ varying vec3 vWorldPos;
 varying vec3 vRadial;
 varying float vElevation;
 varying float vTemperature;
+varying vec3 vClimate;
 
 void main() {
   vColor = biomeColor;
   vElevation = elevation;
   vTemperature = temperature;
+  vClimate = aClimate;
   vec3 radial = normalize(position);
   vRadial = normalize(mat3(modelMatrix) * radial);
   vNormal = normalize(mat3(modelMatrix) * normal);
@@ -29,6 +32,7 @@ uniform vec3 uRockColor;
 uniform vec3 uSandColor;
 uniform vec3 uSnowColor;
 uniform float uFill;
+uniform float uOverlay;
 
 varying vec3 vNormal;
 varying vec3 vColor;
@@ -36,6 +40,7 @@ varying vec3 vWorldPos;
 varying vec3 vRadial;
 varying float vElevation;
 varying float vTemperature;
+varying vec3 vClimate;
 
 float hash13(vec3 p) {
   p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
@@ -44,7 +49,7 @@ float hash13(vec3 p) {
 }
 
 void main() {
-  if (vElevation <= 0.0) discard;
+  if (vElevation <= 0.0 && uOverlay < 0.5) discard;
 
   vec3 N = normalize(vNormal);
   vec3 radial = normalize(vRadial);
@@ -67,6 +72,24 @@ void main() {
 
   float grain = hash13(vWorldPos * 90.0);
   col *= 0.955 + grain * 0.09;
+
+  float t = clamp(vTemperature * 0.5 + 0.5, 0.0, 1.0);
+  vec3 tempCol = mix(vec3(0.12, 0.28, 0.85), vec3(0.95, 0.95, 0.98), smoothstep(0.0, 0.5, t));
+  tempCol = mix(tempCol, vec3(0.92, 0.28, 0.18), smoothstep(0.5, 1.0, t));
+  float h = clamp(vClimate.y * 0.5 + 0.5, 0.0, 1.0);
+  vec3 humCol = mix(vec3(0.72, 0.55, 0.22), vec3(0.18, 0.55, 0.42), smoothstep(0.0, 0.55, h));
+  humCol = mix(humCol, vec3(0.15, 0.38, 0.82), smoothstep(0.55, 1.0, h));
+  float c = clamp(vClimate.x * 0.5 + 0.5, 0.0, 1.0);
+  vec3 contCol = mix(vec3(0.05, 0.12, 0.38), vec3(0.2, 0.55, 0.72), smoothstep(0.0, 0.42, c));
+  contCol = mix(contCol, vec3(0.42, 0.62, 0.28), smoothstep(0.42, 0.7, c));
+  contCol = mix(contCol, vec3(0.55, 0.42, 0.28), smoothstep(0.7, 1.0, c));
+  float e = clamp(vClimate.z * 0.5 + 0.5, 0.0, 1.0);
+  vec3 eroCol = mix(vec3(0.82, 0.84, 0.88), vec3(0.55, 0.38, 0.22), e);
+
+  if (uOverlay > 0.5 && uOverlay < 1.5) col = tempCol;
+  else if (uOverlay > 1.5 && uOverlay < 2.5) col = humCol;
+  else if (uOverlay > 2.5 && uOverlay < 3.5) col = contCol;
+  else if (uOverlay > 3.5) col = eroCol;
 
   vec3 L = normalize(uLightDir);
   float ndl = dot(N, L);

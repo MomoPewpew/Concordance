@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
-import { Spherical, Vector3 } from 'three'
+import { Raycaster, Spherical, Vector2, Vector3, type Object3D } from 'three'
 import { clamp, smoothstep } from '../worldgen/noise'
 
 const SURFACE_RADIUS = 1
@@ -19,9 +19,15 @@ function pitchFromAltitude(altitude: number): number {
   return t * t * MAX_PITCH
 }
 
-export function GlobeControls() {
+type GlobeControlsProps = {
+  onPickSurface?: (x: number, y: number, z: number) => void
+  onSelectPin?: (articleId: string) => void
+}
+
+export function GlobeControls({ onPickSurface, onSelectPin }: GlobeControlsProps) {
   const camera = useThree((s) => s.camera)
   const gl = useThree((s) => s.gl)
+  const scene = useThree((s) => s.scene)
 
   const theta = useRef(0)
   const phi = useRef(Math.PI / 2)
@@ -30,6 +36,7 @@ export function GlobeControls() {
   const goalPhi = useRef(Math.PI / 2)
   const goalAltitude = useRef(1.35)
   const dragging = useRef(false)
+  const moved = useRef(false)
   const last = useRef({ x: 0, y: 0 })
   const primed = useRef(false)
 
@@ -39,6 +46,9 @@ export function GlobeControls() {
   const tangentUp = useRef(new Vector3())
   const worldUp = useRef(new Vector3(0, 1, 0))
   const spherical = useRef(new Spherical())
+  const raycaster = useRef(new Raycaster())
+  const ndc = useRef(new Vector2())
+  const pickPoint = useRef(new Vector3())
 
   useEffect(() => {
     spherical.current.setFromVector3(camera.position)
@@ -60,18 +70,60 @@ export function GlobeControls() {
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0) return
       dragging.current = true
+      moved.current = false
       last.current.x = event.clientX
       last.current.y = event.clientY
       el.setPointerCapture(event.pointerId)
       el.style.cursor = 'grabbing'
     }
 
-    const onPointerUp = (event: PointerEvent) => {
+    const endDrag = (event: PointerEvent, commitClick: boolean) => {
+      const wasClick = dragging.current && !moved.current
       dragging.current = false
       if (el.hasPointerCapture(event.pointerId)) {
         el.releasePointerCapture(event.pointerId)
       }
       el.style.cursor = 'grab'
+      if (commitClick && wasClick) {
+        pickAt(event.clientX, event.clientY)
+      }
+    }
+
+    const pickAt = (clientX: number, clientY: number) => {
+      const rect = el.getBoundingClientRect()
+      ndc.current.set(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1,
+      )
+      raycaster.current.setFromCamera(ndc.current, camera)
+
+      const pins: Object3D[] = []
+      const spheres: Object3D[] = []
+      scene.traverse((object) => {
+        if (object.name === 'pin-head') pins.push(object)
+        if (object.name === 'pick-sphere') spheres.push(object)
+      })
+
+      const pinHit = raycaster.current.intersectObjects(pins, false)[0]
+      const pinId = pinHit?.object.userData.articleId
+      if (typeof pinId === 'string') {
+        onSelectPin?.(pinId)
+        return
+      }
+
+      const globeHit = raycaster.current.intersectObjects(spheres, false)[0]
+      if (!globeHit) return
+      pickPoint.current.copy(globeHit.point)
+      globeHit.object.worldToLocal(pickPoint.current)
+      onPickSurface?.(pickPoint.current.x, pickPoint.current.y, pickPoint.current.z)
+    }
+
+    const onPointerUp = (event: PointerEvent) => {
+      endDrag(event, true)
+    }
+
+    const onPointerCancel = (event: PointerEvent) => {
+      endDrag(event, false)
     }
 
     const onPointerMove = (event: PointerEvent) => {
@@ -80,6 +132,8 @@ export function GlobeControls() {
       const dy = event.clientY - last.current.y
       last.current.x = event.clientX
       last.current.y = event.clientY
+      if (Math.hypot(dx, dy) > 2) moved.current = true
+      if (!moved.current) return
       const scale = (2 * Math.PI * ROTATE_SPEED) / el.clientHeight
       goalTheta.current -= dx * scale
       goalPhi.current = clamp(
@@ -102,18 +156,18 @@ export function GlobeControls() {
     el.style.cursor = 'grab'
     el.addEventListener('pointerdown', onPointerDown)
     el.addEventListener('pointerup', onPointerUp)
-    el.addEventListener('pointercancel', onPointerUp)
+    el.addEventListener('pointercancel', onPointerCancel)
     el.addEventListener('pointermove', onPointerMove)
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => {
       el.style.cursor = ''
       el.removeEventListener('pointerdown', onPointerDown)
       el.removeEventListener('pointerup', onPointerUp)
-      el.removeEventListener('pointercancel', onPointerUp)
+      el.removeEventListener('pointercancel', onPointerCancel)
       el.removeEventListener('pointermove', onPointerMove)
       el.removeEventListener('wheel', onWheel)
     }
-  }, [gl])
+  }, [camera, gl, scene, onPickSurface, onSelectPin])
 
   useFrame((_, delta) => {
     if (!primed.current) return

@@ -122,3 +122,10 @@ export function pickBiome(
 
   return BIOME.snowyPlains
 }
+
+export function biomeLabel(id: BiomeId): string {
+  return id
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}

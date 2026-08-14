@@ -1,17 +1,22 @@
 import { useMemo } from 'react'
-import type { World } from '../data/types'
+import type { OverlayMode } from '../data/overlay'
+import type { Article, World } from '../data/types'
 import { Atmosphere } from './Atmosphere'
 import { Clouds } from './Clouds'
 import { STAR_DIRECTION } from './lighting'
 import { Ocean } from './Ocean'
 import { OrbitAxis, SpinAxis } from './PlanetAxes'
+import { PickSphere } from './PickSphere'
+import { PinMarker } from './PinMarker'
 import { Precipitation } from './Precipitation'
-import { SeaLevel } from './SeaLevel'
 import { Star } from './Star'
 import { Terrain } from './Terrain'
 
 type GlobeSceneProps = {
   world: World
+  articles: Article[]
+  selectedArticleId: string | null
+  overlay: OverlayMode
   showSpinAxis: boolean
   dayAngle: number
   evenLight: boolean
@@ -19,6 +24,9 @@ type GlobeSceneProps = {
 
 export function GlobeScene({
   world,
+  articles,
+  selectedArticleId,
+  overlay,
   showSpinAxis,
   dayAngle,
   evenLight,
@@ -29,6 +37,8 @@ export function GlobeScene({
   )
   const tiltRad = -(world.globe.axialTilt * Math.PI) / 180
   const dayRad = (dayAngle * Math.PI) / 180
+  const climateMap = overlay !== 'none'
+  const fill = evenLight || climateMap
 
   return (
     <>
@@ -37,12 +47,25 @@ export function GlobeScene({
       <Star />
       <group rotation={[0, 0, tiltRad]} name="planet">
         <group rotation={[0, dayRad, 0]} name="daylight">
-          <SeaLevel />
-          <Ocean evenLight={evenLight} />
-          <Terrain params={world.globe} evenLight={evenLight} />
-          <Precipitation params={world.globe} evenLight={evenLight} />
-          <Clouds seed={world.globe.seed} evenLight={evenLight} />
-          <Atmosphere evenLight={evenLight} />
+          <PickSphere />
+          {!climateMap && <Ocean evenLight={fill} />}
+          <Terrain params={world.globe} evenLight={fill} overlay={overlay} />
+          {!climateMap && (
+            <Precipitation params={world.globe} evenLight={fill} />
+          )}
+          {!climateMap && <Clouds seed={world.globe.seed} evenLight={fill} />}
+          <Atmosphere evenLight={fill} />
+          {articles.map((article) =>
+            article.pin ? (
+              <PinMarker
+                key={article.id}
+                articleId={article.id}
+                lat={article.pin.lat}
+                lon={article.pin.lon}
+                selected={article.id === selectedArticleId}
+              />
+            ) : null,
+          )}
         </group>
         {showSpinAxis && <SpinAxis />}
       </group>

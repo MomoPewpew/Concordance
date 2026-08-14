@@ -36,9 +36,9 @@ function vertKey(x: number, y: number, z: number): string {
 }
 
 function cacheKey(params: GlobeParams): string {
-  return JSON.stringify(params, (key, value) =>
+  return `v2:${JSON.stringify(params, (key, value) =>
     key === 'axialTilt' ? undefined : value,
-  )
+  )}`
 }
 
 const geometryCache = new Map<string, BufferGeometry>()
@@ -56,6 +56,7 @@ export function generateTerrain(params: GlobeParams): BufferGeometry {
   const sphereZ: number[] = []
   const elevations: number[] = []
   const temperatures: number[] = []
+  const climates: number[] = []
   const colors: number[] = []
   const indices: number[] = []
 
@@ -79,6 +80,7 @@ export function generateTerrain(params: GlobeParams): BufferGeometry {
     sphereZ.push(sz)
     elevations.push(elevation)
     temperatures.push(temperature)
+    climates.push(climate.continentalness, climate.humidity, climate.erosion)
     colors.push(r, g, b)
     return i
   }
@@ -131,6 +133,10 @@ export function generateTerrain(params: GlobeParams): BufferGeometry {
   geometry.setAttribute(
     'temperature',
     new BufferAttribute(new Float32Array(temperatures), 1),
+  )
+  geometry.setAttribute(
+    'aClimate',
+    new BufferAttribute(new Float32Array(climates), 3),
   )
   geometry.setAttribute(
     'biomeColor',
