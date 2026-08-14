@@ -3,6 +3,7 @@ attribute float elevation;
 attribute float temperature;
 attribute vec3 aClimate;
 attribute float aLake;
+attribute float aSkirt;
 
 uniform float uSeed;
 
@@ -14,6 +15,7 @@ varying float vElevation;
 varying float vTemperature;
 varying vec3 vClimate;
 varying float vLake;
+varying float vSkirt;
 
 float hash13(vec3 p) {
   p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
@@ -26,6 +28,7 @@ void main() {
   vTemperature = temperature;
   vClimate = aClimate;
   vLake = aLake;
+  vSkirt = aSkirt;
 
   vec3 radial = normalize(position);
   float land = smoothstep(0.0004, 0.0022, elevation) * (1.0 - aLake);
@@ -63,6 +66,7 @@ varying float vElevation;
 varying float vTemperature;
 varying vec3 vClimate;
 varying float vLake;
+varying float vSkirt;
 
 float hash13(vec3 p) {
   p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
@@ -185,7 +189,14 @@ void main() {
   vec3 dPdy = dFdy(vWorldPos);
   vec3 geoN = normalize(cross(dPdx, dPdy));
   if (dot(geoN, N) < 0.0) geoN = -geoN;
-  N = normalize(mix(N, geoN, 0.32 * landCover));
+  float snowHint = smoothstep(0.05, -0.28, vTemperature);
+  float geoMix =
+    mix(0.12, 0.32, uHasMaps) *
+    landCover *
+    (1.0 - vSkirt) *
+    (1.0 - snowHint * 0.82);
+  N = normalize(mix(N, geoN, geoMix));
+  N = normalize(mix(N, radial, vSkirt + snowHint * 0.28 * (1.0 - uHasMaps)));
 
   float slope = 1.0 - clamp(dot(N, radial), 0.0, 1.0);
 
@@ -307,12 +318,13 @@ void main() {
   float bumpAmp = mix(0.1, 0.55, close) * (0.35 + slope * 1.4 + dry * 0.5);
   bumpAmp *= 1.0 - fresh * 0.92;
   bumpAmp *= mix(0.15, 1.0, landCover);
+  bumpAmp *= 1.0 - vSkirt;
   N = normalize(N + (grad - radial * dot(grad, radial)) * bumpAmp);
   N = normalize(mix(N, radial, fresh * 0.62));
 
   slope = 1.0 - clamp(dot(N, radial), 0.0, 1.0);
 
-  float rockMix = smoothstep(0.12, 0.42, slope) * (1.0 - fresh) * landCover;
+  float rockMix = smoothstep(0.12, 0.42, slope) * (1.0 - fresh) * landCover * (1.0 - vSkirt);
   col = mix(col, uRockColor, rockMix * 0.92);
 
   vec3 wetSand = mix(srgb(0.62, 0.52, 0.38), sandCol, 0.55);

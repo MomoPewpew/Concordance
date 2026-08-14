@@ -29,6 +29,7 @@ export type TileMeshData = {
   temperature: Float32Array
   aClimate: Float32Array
   aLake: Float32Array
+  aSkirt: Float32Array
   indices: Uint32Array
   surfaceCount: number
   surfaceIndexCount: number
@@ -214,7 +215,9 @@ export function generateTile(
     const displaced = lakeFlags[src]
       ? lakeRadius[src] - 1 - 0.0009
       : elevation
-    const radius = 1 + displaced - (isSkirtBot ? SKIRT_DROP : 0)
+    const polar = sphereY[i] * sphereY[i]
+    const drop = isSkirtBot ? SKIRT_DROP * (1 + polar * 2.2) : 0
+    const radius = 1 + displaced - drop
     positions[i * 3] = sphereX[i] * radius
     positions[i * 3 + 1] = sphereY[i] * radius
     positions[i * 3 + 2] = sphereZ[i] * radius
@@ -241,6 +244,9 @@ export function generateTile(
     lakeIdx.push(lakeVert(a), lakeVert(b), lakeVert(c))
   }
 
+  const skirts = new Float32Array(vertCount)
+  for (let i = surfaceCount; i < vertCount; i++) skirts[i] = 1
+
   return {
     face,
     ti,
@@ -253,6 +259,7 @@ export function generateTile(
     temperature: temperatures,
     aClimate: climates,
     aLake: lakeFlags,
+    aSkirt: skirts,
     indices: new Uint32Array(indexList),
     surfaceCount,
     surfaceIndexCount,

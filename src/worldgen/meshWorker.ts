@@ -29,6 +29,7 @@ function transferList(tile: TileMeshData): Transferable[] {
     tile.temperature.buffer,
     tile.aClimate.buffer,
     tile.aLake.buffer,
+    tile.aSkirt.buffer,
     tile.indices.buffer,
   ]
   if (tile.lakePositions) list.push(tile.lakePositions.buffer)

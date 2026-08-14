@@ -62,17 +62,29 @@ function toGpu(data: TileMeshData): GpuMesh {
   )
   terrain.setAttribute('aClimate', new BufferAttribute(data.aClimate, 3))
   terrain.setAttribute('aLake', new BufferAttribute(data.aLake, 1))
+  terrain.setAttribute('aSkirt', new BufferAttribute(data.aSkirt, 1))
   terrain.setIndex(
     new BufferAttribute(data.indices.subarray(0, data.surfaceIndexCount), 1),
   )
   terrain.computeVertexNormals()
   const normals = terrain.getAttribute('normal')
-  for (let i = data.surfaceCount; i < normals.count; i++) {
+  for (let i = 0; i < normals.count; i++) {
     const x = data.positions[i * 3]
     const y = data.positions[i * 3 + 1]
     const z = data.positions[i * 3 + 2]
     const len = Math.hypot(x, y, z) || 1
-    normals.setXYZ(i, x / len, y / len, z / len)
+    const rx = x / len
+    const ry = y / len
+    const rz = z / len
+    if (i >= data.surfaceCount) {
+      normals.setXYZ(i, rx, ry, rz)
+    } else {
+      const nx = normals.getX(i) * 0.35 + rx * 0.65
+      const ny = normals.getY(i) * 0.35 + ry * 0.65
+      const nz = normals.getZ(i) * 0.35 + rz * 0.65
+      const nlen = Math.hypot(nx, ny, nz) || 1
+      normals.setXYZ(i, nx / nlen, ny / nlen, nz / nlen)
+    }
   }
   normals.needsUpdate = true
   terrain.setIndex(new BufferAttribute(data.indices, 1))
