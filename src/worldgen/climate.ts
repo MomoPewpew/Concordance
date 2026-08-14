@@ -16,6 +16,7 @@ export type ClimateSample = {
   continentalness: number
   erosion: number
   weirdness: number
+  ridgeFine: number
   temperature: number
   humidity: number
 }
@@ -54,6 +55,11 @@ export function sampleClimate(
   const c = clamp(cRaw * 1.15, -1.15, 1)
   const e = fbm3(samplers.erosion, px, py, pz, params.erosion)
   const w = fbm3(samplers.weirdness, px, py, pz, params.weirdness)
+  const wFine = fbm3(samplers.weirdness, px, py, pz, {
+    ...params.weirdness,
+    scale: params.weirdness.scale * 2.55,
+    octaves: Math.max(1, params.weirdness.octaves - 1),
+  })
   const tNoise = fbm3(samplers.temperature, px, py, pz, params.temperature)
   const hNoise = fbm3(samplers.humidity, px, py, pz, params.humidity)
 
@@ -69,6 +75,7 @@ export function sampleClimate(
     continentalness: c,
     erosion: e,
     weirdness: w,
+    ridgeFine: wFine,
     temperature,
     humidity,
   }

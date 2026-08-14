@@ -11,21 +11,8 @@ Ideas from the globe POC. The goal is still the same: this has to feel like **a 
 5. Apparent resolution — pixel biomes, noisy coasts, bump, heightlets, distance octaves, baked cubemap
 6. Streaming cube-sphere tiles — coarse globe immediately, worker refines nearby patches, skirts at LOD seams
 7. Fresh water — valley rivers and small ponds in the terrain shader; inland seas still have a mesh
-
-## Painted-terrain look
-
-Runeterra-style relief is mostly **lighting a height field**, not a hand-painted JPEG. Stay procedural; shade like terrain.
-
-### Now
-
-1. Harder sunlight — less wrap, so ridges and the terminator have real shadow
-2. Valley AO — darken eroded folds and steep crevices (planet-fixed, not screen-space)
-3. Slope rock — expose rock on steep faces the way a painted map uses cliff grain
-4. Baked normal cubemap — light from height, not from tile triangles
-5. Sunlit vs fold color — yellow-green on lit grass, deeper green in shade
-6. Micro grain / triplanar detail at continent zoom
-7. Valley haze when looking across land
-8. Extra ridged erosion in height when zoomed in
+8. Painted-terrain look — harder sun, valley AO, slope rock, baked normals, sunlit/fold color, triplanar grain, valley haze, zoom ridged gulleys
+9. Form and place — sharper ridged peaks, valley clouds, downhill drainages, forest density, feature labels on the globe
 
 ## Still out of scope
 

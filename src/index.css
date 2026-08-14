@@ -520,3 +520,25 @@ body {
   cursor: crosshair;
   image-rendering: pixelated;
 }
+
+.globe-label {
+  pointer-events: none;
+  color: #f3eee6;
+  font-family: 'Iowan Old Style', Palatino, 'Palatino Linotype', 'Times New Roman', serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 6px rgba(6, 10, 18, 0.9),
+    0 1px 2px rgba(6, 10, 18, 0.95);
+  white-space: nowrap;
+  transform: translateY(-18px);
+  opacity: 0;
+}
+
+.globe-label-selected {
+  letter-spacing: 0.16em;
+  color: #fff8ee;
+}

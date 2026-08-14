@@ -1,11 +1,12 @@
 import { useFrame } from '@react-three/fiber'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { ShaderMaterial, Vector3 } from 'three'
 import {
   cloudFragmentShader,
   cloudVertexShader,
 } from '../shaders/globeShaders'
 import { CLOUD_COLOR, STAR_DIRECTION } from './lighting'
+import { emptyCubeMap, type BakedMaps } from './useBakedMaps'
 import { useFillLight } from './useFillLight'
 
 type CloudLayerProps = {
@@ -20,6 +21,8 @@ type CloudLayerProps = {
   radius: number
   offsetSalt: number
   evenLight: boolean
+  valley: number
+  baked: BakedMaps | null
 }
 
 function seedOffset(seed: number, salt: number): Vector3 {
@@ -43,6 +46,8 @@ function CloudLayer({
   radius,
   offsetSalt,
   evenLight,
+  valley,
+  baked,
 }: CloudLayerProps) {
   const material = useMemo(
     () =>
@@ -62,11 +67,16 @@ function CloudLayer({
           uStretch: { value: stretch },
           uWarp: { value: warp },
           uFill: { value: 0 },
+          uMaps: { value: emptyCubeMap() },
+          uHasMaps: { value: 0 },
+          uValley: { value: valley },
         },
         transparent: true,
         depthWrite: false,
       }),
     [
+      cloudFragmentShader,
+      cloudVertexShader,
       coverage,
       noiseScale,
       offsetSalt,
@@ -75,9 +85,16 @@ function CloudLayer({
       softness,
       speed,
       stretch,
+      valley,
       warp,
     ],
   )
+
+  useEffect(() => {
+    material.uniforms.uMaps.value = baked?.albedo ?? emptyCubeMap()
+    material.uniforms.uHasMaps.value = baked ? 1 : 0
+    material.uniforms.uValley.value = valley
+  }, [baked, material, valley])
 
   useFillLight(material, evenLight)
 
@@ -100,9 +117,10 @@ function CloudLayer({
 type CloudsProps = {
   seed: number
   evenLight: boolean
+  baked: BakedMaps | null
 }
 
-export function Clouds({ seed, evenLight }: CloudsProps) {
+export function Clouds({ seed, evenLight, baked }: CloudsProps) {
   return (
     <group name="homosphere-clouds">
       <CloudLayer
@@ -117,6 +135,8 @@ export function Clouds({ seed, evenLight }: CloudsProps) {
         warp={0.55}
         offsetSalt={1}
         evenLight={evenLight}
+        valley={1}
+        baked={baked}
       />
       <CloudLayer
         seed={seed}
@@ -130,6 +150,8 @@ export function Clouds({ seed, evenLight }: CloudsProps) {
         warp={0.8}
         offsetSalt={7}
         evenLight={evenLight}
+        valley={0.38}
+        baked={baked}
       />
     </group>
   )

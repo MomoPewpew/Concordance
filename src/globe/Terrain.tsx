@@ -8,7 +8,7 @@ import {
 } from '../shaders/globeShaders'
 import { Lakes } from './Lakes'
 import { ROCK_COLOR, SAND_COLOR, SNOW_COLOR, STAR_DIRECTION } from './lighting'
-import { emptyCubeMap, useBakedMaps } from './useBakedMaps'
+import { emptyCubeMap, type BakedMaps } from './useBakedMaps'
 import { useFillLight } from './useFillLight'
 import { useOverlay } from './useOverlay'
 import { useTerrainTiles } from './useTerrainTiles'
@@ -17,6 +17,7 @@ type TerrainTilesProps = {
   params: GlobeParams
   evenLight: boolean
   overlay: OverlayMode
+  baked: BakedMaps | null
   lite?: boolean
   showLakes?: boolean
 }
@@ -25,11 +26,11 @@ export function TerrainTiles({
   params,
   evenLight,
   overlay,
+  baked,
   lite = false,
   showLakes = true,
 }: TerrainTilesProps) {
   const { tiles, groupRef } = useTerrainTiles(params, lite)
-  const baked = useBakedMaps(params)
 
   const material = useMemo(
     () =>

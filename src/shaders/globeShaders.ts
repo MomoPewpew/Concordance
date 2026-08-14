@@ -315,11 +315,11 @@ void main() {
   vec3 flowP = local;
   float warpR = fbm(flowP * 3.6 + uSeed + 3.1, close) - 0.5;
   vec3 rp = flowP * 4.2 + vec3(warpR, -warpR, warpR * 0.7) * 0.85 + uSeed;
-  float major = riverBand(rp, mix(5.5, 8.5, close));
-  float minor = riverBand(flowP * 9.4 + vec3(warpR) * 1.6 - uSeed, mix(6.5, 10.0, close));
-  float creek = riverBand(flowP * 18.5 + uSeed * 0.7, 11.0) * mix(0.15, 1.0, close);
-  float rivers = max(major, max(minor * 0.85, creek * 0.55)) * drain;
-  rivers = smoothstep(0.12, 0.42, rivers);
+  float major = riverBand(rp, mix(6.5, 10.0, close)) * 0.2;
+  float minor = riverBand(flowP * 9.4 + vec3(warpR) * 1.6 - uSeed, mix(7.2, 11.0, close)) * 0.4;
+  float creek = riverBand(flowP * 18.5 + uSeed * 0.7, 12.0) * mix(0.1, 0.55, close);
+  float rivers = max(major, max(minor, creek)) * drain;
+  rivers = smoothstep(0.16, 0.48, rivers);
 
   float pondN = vnoise(flowP * mix(7.5, 13.0, close) + 19.4 + uSeed);
   float basin =
@@ -378,6 +378,21 @@ void main() {
   N = normalize(mix(N, radial, fresh * 0.62));
 
   slope = 1.0 - clamp(dot(N, radial), 0.0, 1.0);
+
+  float forestAmt =
+    landCover *
+    (1.0 - vLake) *
+    (1.0 - fresh) *
+    (1.0 - sandAmt) *
+    inland *
+    smoothstep(-0.05, 0.2, hum) *
+    (1.0 - smoothstep(0.07, 0.2, slope)) *
+    (1.0 - smoothstep(0.03, 0.1, height)) *
+    smoothstep(-0.3, 0.04, temp);
+  vec3 canopy = mix(srgb(0.09, 0.26, 0.11), srgb(0.05, 0.17, 0.08), nHi);
+  canopy = mix(canopy, srgb(0.16, 0.34, 0.14), nPatch * 0.55);
+  float canopyN = nMid * 0.5 + nHi * 0.5;
+  col = mix(col, canopy, forestAmt * mix(0.26, 0.72, close) * (0.4 + canopyN * 0.6));
 
   float rockMix =
     smoothstep(0.05, 0.26, slope) *
@@ -663,6 +678,9 @@ uniform float uOpacity;
 uniform float uStretch;
 uniform float uWarp;
 uniform float uFill;
+uniform samplerCube uMaps;
+uniform float uHasMaps;
+uniform float uValley;
 
 varying vec3 vNormal;
 varying vec3 vWorldPos;
@@ -723,6 +741,16 @@ void main() {
   float tropic = smoothstep(0.92, 0.22, lat);
   float itcz = exp(-dir.y * dir.y * 28.0) * 0.18;
   float coverage = mix(0.72, uCoverage, tropic) - itcz;
+
+  if (uHasMaps > 0.5) {
+    float a = textureCube(uMaps, dir).a;
+    float land = smoothstep(0.49, 0.58, a);
+    float h = max(a - 0.5, 0.0);
+    float valley = (1.0 - smoothstep(0.0, 0.1, h)) * land;
+    float peak = smoothstep(0.05, 0.2, h) * land;
+    coverage -= valley * 0.18 * uValley;
+    coverage += peak * 0.24 * uValley;
+  }
 
   float cloud = smoothstep(coverage, coverage + uSoftness, n);
 

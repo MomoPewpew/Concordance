@@ -3,6 +3,7 @@ import type { OverlayMode } from '../data/overlay'
 import type { Article, World } from '../data/types'
 import { Atmosphere } from './Atmosphere'
 import { Clouds } from './Clouds'
+import { Drainages } from './Drainages'
 import { FlowStrokes } from './FlowStrokes'
 import { STAR_DIRECTION } from './lighting'
 import { Ocean } from './Ocean'
@@ -12,6 +13,7 @@ import { PinMarker } from './PinMarker'
 import { Precipitation } from './Precipitation'
 import { Star } from './Star'
 import { TerrainTiles } from './Terrain'
+import { useBakedMaps } from './useBakedMaps'
 
 type GlobeSceneProps = {
   world: World
@@ -36,6 +38,7 @@ export function GlobeScene({
   evenLight,
   lite = false,
 }: GlobeSceneProps) {
+  const baked = useBakedMaps(world.globe)
   const starPos = useMemo(
     () => STAR_DIRECTION.clone().multiplyScalar(8),
     [],
@@ -59,13 +62,21 @@ export function GlobeScene({
             params={world.globe}
             evenLight={fill}
             overlay={overlay}
+            baked={baked}
             lite={lite}
             showLakes={!climateMap}
           />
           {!climateMap && !lite && (
             <Precipitation params={world.globe} evenLight={fill} />
           )}
-          {!climateMap && <Clouds seed={world.globe.seed} evenLight={fill} />}
+          {!climateMap && !lite && <Drainages params={world.globe} />}
+          {!climateMap && (
+            <Clouds
+              seed={world.globe.seed}
+              evenLight={fill}
+              baked={baked}
+            />
+          )}
           {!climateMap && showFlow && <FlowStrokes params={world.globe} />}
           <Atmosphere evenLight={fill} />
           {articles.map((article) =>
@@ -76,6 +87,7 @@ export function GlobeScene({
                 lat={article.pin.lat}
                 lon={article.pin.lon}
                 selected={article.id === selectedArticleId}
+                title={article.feature ? article.title : undefined}
                 feature={article.feature}
               />
             ) : null,

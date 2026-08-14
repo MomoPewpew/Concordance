@@ -28,14 +28,15 @@ npm run lint    # oxlint
 - Fragment-rate biomes, noisy coasts, bump, a worker-baked albedo cubemap, and worker tile LOD so coasts stay sharp when you zoom
 - **View** menu: spin/orbit axes, even lighting, daylight, climate overlays, view presets, wind and currents
 - **Randomiser** menu: tilt, oceans, mountains, continents, roughness, climate, inland seas, flattening, resolution, seed, compare
-- Named peaks, basins, islands, and lakes are auto-pinned; click the globe to add your own
+- Named peaks, basins, islands, and lakes are auto-pinned with atlas labels; click the globe to add your own
+- Height-field drainages, valley-hugging clouds, and denser forest on humid flats
 - Equirectangular minimap strip; click it to look at that longitude
 - Split view to compare two seeds with the same sliders
 - Article editor with `[[wiki links]]`; the world and articles persist in the browser
 
 ## Worldgen
 
-Climate is 3D simplex noise sampled on the unit sphere (plus latitude for temperature), so poles do not pinch. Height is a simplified noise router: continentalness for land vs ocean, ridged peaks where erosion is low.
+Climate is 3D simplex noise sampled on the unit sphere (plus latitude for temperature), so poles do not pinch. Height is a simplified noise router: continentalness for land vs ocean, ridged peaks (plus a finer ridge field) where erosion is low.
 
 A world is fully defined by `GlobeParams` in [`src/data/types.ts`](src/data/types.ts). Change the seed (or use the Randomiser) to rebuild the globe.
 
@@ -53,7 +54,7 @@ Articles are wiki pages with optional globe pins. The POC stores one world plus 
 ```
 src/
   globe/       canvas, terrain, ocean, atmosphere, clouds, axes
-  worldgen/    noise, climate, height, biomes, water, features, flow, minimap, tiles
+  worldgen/    noise, climate, height, biomes, water, features, rivers, flow, minimap, tiles
   shaders/     terrain, ocean, atmosphere, clouds
   data/        types, sample world, randomiser, wiki, persistence
   ui/          View, Randomiser, article dock, minimap
