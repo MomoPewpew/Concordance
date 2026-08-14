@@ -1,7 +1,12 @@
 import { Vector3 } from 'three'
 import { srgbToLinear } from '../worldgen/noise'
+import { ORBIT_AXIS } from './axes'
 
-export const SUN_DIRECTION = new Vector3(4.2, 2.4, 3.6).normalize()
+/** Direction to the system's star. Always perpendicular to the orbit axis. */
+export const STAR_DIRECTION = (() => {
+  const dir = new Vector3(4.2, 2.4, 3.6)
+  return dir.addScaledVector(ORBIT_AXIS, -dir.dot(ORBIT_AXIS)).normalize()
+})()
 
 export const ROCK_COLOR = new Vector3(
   srgbToLinear(0.42),

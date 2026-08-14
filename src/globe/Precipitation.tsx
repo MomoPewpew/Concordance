@@ -7,7 +7,7 @@ import {
   precipVertexShader,
 } from '../shaders/globeShaders'
 import { generatePrecipitation } from '../worldgen/precipitation'
-import { RAIN_COLOR, SNOW_COLOR, SUN_DIRECTION } from './lighting'
+import { RAIN_COLOR, SNOW_COLOR, STAR_DIRECTION } from './lighting'
 
 type PrecipitationProps = {
   params: GlobeParams
@@ -27,7 +27,7 @@ export function Precipitation({ params }: PrecipitationProps) {
           uOuter: { value: 1.024 },
           uRainColor: { value: RAIN_COLOR.clone() },
           uSnowColor: { value: SNOW_COLOR.clone() },
-          uLightDir: { value: SUN_DIRECTION.clone() },
+          uLightDir: { value: STAR_DIRECTION.clone() },
         },
         transparent: true,
         depthWrite: false,

@@ -1,18 +1,18 @@
 import { Billboard } from '@react-three/drei'
 import { useMemo } from 'react'
 import { AdditiveBlending } from 'three'
-import { SUN_DIRECTION } from './lighting'
+import { STAR_DIRECTION } from './lighting'
 
-export const SUN_DISTANCE = 14
+export const STAR_DISTANCE = 14
 
-export function Sun() {
+export function Star() {
   const position = useMemo(
-    () => SUN_DIRECTION.clone().multiplyScalar(SUN_DISTANCE),
+    () => STAR_DIRECTION.clone().multiplyScalar(STAR_DISTANCE),
     [],
   )
 
   return (
-    <group position={position} name="sun">
+    <group position={position} name="star">
       <mesh>
         <sphereGeometry args={[0.2, 32, 32]} />
         <meshBasicMaterial color="#fff4c8" toneMapped={false} />

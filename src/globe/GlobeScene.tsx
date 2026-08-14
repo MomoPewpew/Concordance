@@ -2,12 +2,12 @@ import { useMemo } from 'react'
 import type { World } from '../data/types'
 import { Atmosphere } from './Atmosphere'
 import { Clouds } from './Clouds'
-import { SUN_DIRECTION } from './lighting'
+import { STAR_DIRECTION } from './lighting'
 import { Ocean } from './Ocean'
 import { OrbitAxis, SpinAxis } from './PlanetAxes'
 import { Precipitation } from './Precipitation'
 import { SeaLevel } from './SeaLevel'
-import { Sun } from './Sun'
+import { Star } from './Star'
 import { Terrain } from './Terrain'
 
 type GlobeSceneProps = {
@@ -17,8 +17,8 @@ type GlobeSceneProps = {
 }
 
 export function GlobeScene({ world, showSpinAxis, dayAngle }: GlobeSceneProps) {
-  const sunPos = useMemo(
-    () => SUN_DIRECTION.clone().multiplyScalar(8),
+  const starPos = useMemo(
+    () => STAR_DIRECTION.clone().multiplyScalar(8),
     [],
   )
   const tiltRad = -(world.globe.axialTilt * Math.PI) / 180
@@ -27,8 +27,8 @@ export function GlobeScene({ world, showSpinAxis, dayAngle }: GlobeSceneProps) {
   return (
     <>
       <hemisphereLight args={['#c5d8ff', '#1a1424', 0.45]} />
-      <directionalLight position={sunPos} intensity={1.35} color="#fff4e0" />
-      <Sun />
+      <directionalLight position={starPos} intensity={1.35} color="#fff4e0" />
+      <Star />
       <group rotation={[0, 0, tiltRad]} name="planet">
         <group rotation={[0, dayRad, 0]} name="daylight">
           <SeaLevel />

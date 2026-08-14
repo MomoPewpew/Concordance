@@ -4,7 +4,7 @@ import {
   atmosphereFragmentShader,
   atmosphereVertexShader,
 } from '../shaders/globeShaders'
-import { ATMOSPHERE_COLOR, SUN_DIRECTION } from './lighting'
+import { ATMOSPHERE_COLOR, STAR_DIRECTION } from './lighting'
 
 export function Atmosphere() {
   const material = useMemo(
@@ -15,7 +15,7 @@ export function Atmosphere() {
         uniforms: {
           uColor: { value: ATMOSPHERE_COLOR.clone() },
           uIntensity: { value: 0.85 },
-          uLightDir: { value: SUN_DIRECTION.clone() },
+          uLightDir: { value: STAR_DIRECTION.clone() },
         },
         side: BackSide,
         transparent: true,

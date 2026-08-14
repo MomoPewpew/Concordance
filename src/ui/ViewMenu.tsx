@@ -44,7 +44,7 @@ export function ViewMenu({
             <span className="view-menu-item-text">
               <span className="view-menu-item-title">Spin axis</span>
               <span className="view-menu-item-hint">
-                Cyan is planet spin, gold is the orbit around the sun. They
+                Cyan is planet spin, gold is the orbit around the star. They
                 split when the world has axial tilt.
               </span>
             </span>
@@ -63,13 +63,13 @@ export function ViewMenu({
                   className="view-menu-swatch view-menu-swatch-dashed"
                   style={{ borderColor: ORBIT_AXIS_COLOR }}
                 />
-                Orbit around sun
+                Orbit around star
               </li>
             </ul>
           )}
           <SliderField
             label="Daylight"
-            hint="Rotate the planet around its spin axis to change which side faces the sun"
+            hint="Rotate the planet around its spin axis to change which side faces the star"
             value={dayAngle}
             min={0}
             max={360}

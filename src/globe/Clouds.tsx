@@ -5,7 +5,7 @@ import {
   cloudFragmentShader,
   cloudVertexShader,
 } from '../shaders/globeShaders'
-import { CLOUD_COLOR, SUN_DIRECTION } from './lighting'
+import { CLOUD_COLOR, STAR_DIRECTION } from './lighting'
 
 type CloudLayerProps = {
   seed: number
@@ -47,7 +47,7 @@ function CloudLayer({
         vertexShader: cloudVertexShader,
         fragmentShader: cloudFragmentShader,
         uniforms: {
-          uLightDir: { value: SUN_DIRECTION.clone() },
+          uLightDir: { value: STAR_DIRECTION.clone() },
           uColor: { value: CLOUD_COLOR.clone() },
           uOffset: { value: seedOffset(seed, offsetSalt) },
           uTime: { value: 0 },

@@ -43,7 +43,7 @@ export function RandomiserMenu({
         <div className="chrome-panel chrome-panel-wide">
           <SliderField
             label="Axial tilt"
-            hint="Angle between spin axis and orbit around the sun"
+            hint="Angle between spin axis and orbit around the star"
             value={settings.axialTilt}
             min={0}
             max={90}

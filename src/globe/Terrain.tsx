@@ -6,7 +6,7 @@ import {
   terrainVertexShader,
 } from '../shaders/globeShaders'
 import { generateTerrain } from '../worldgen/generateTerrain'
-import { ROCK_COLOR, SAND_COLOR, SNOW_COLOR, SUN_DIRECTION } from './lighting'
+import { ROCK_COLOR, SAND_COLOR, SNOW_COLOR, STAR_DIRECTION } from './lighting'
 
 type TerrainProps = {
   params: GlobeParams
@@ -21,7 +21,7 @@ export function Terrain({ params }: TerrainProps) {
         vertexShader: terrainVertexShader,
         fragmentShader: terrainFragmentShader,
         uniforms: {
-          uLightDir: { value: SUN_DIRECTION.clone() },
+          uLightDir: { value: STAR_DIRECTION.clone() },
           uRockColor: { value: ROCK_COLOR.clone() },
           uSandColor: { value: SAND_COLOR.clone() },
           uSnowColor: { value: SNOW_COLOR.clone() },

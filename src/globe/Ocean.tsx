@@ -4,7 +4,7 @@ import {
   oceanFragmentShader,
   oceanVertexShader,
 } from '../shaders/globeShaders'
-import { OCEAN_DEEP, OCEAN_SHALLOW, SUN_DIRECTION } from './lighting'
+import { OCEAN_DEEP, OCEAN_SHALLOW, STAR_DIRECTION } from './lighting'
 
 export function Ocean() {
   const material = useMemo(
@@ -13,7 +13,7 @@ export function Ocean() {
         vertexShader: oceanVertexShader,
         fragmentShader: oceanFragmentShader,
         uniforms: {
-          uLightDir: { value: SUN_DIRECTION.clone() },
+          uLightDir: { value: STAR_DIRECTION.clone() },
           uDeepColor: { value: OCEAN_DEEP.clone() },
           uShallowColor: { value: OCEAN_SHALLOW.clone() },
         },
