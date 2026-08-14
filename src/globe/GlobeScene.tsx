@@ -4,7 +4,6 @@ import type { Article, World } from '../data/types'
 import { Atmosphere } from './Atmosphere'
 import { Clouds } from './Clouds'
 import { FlowStrokes } from './FlowStrokes'
-import { Lakes } from './Lakes'
 import { STAR_DIRECTION } from './lighting'
 import { Ocean } from './Ocean'
 import { OrbitAxis, SpinAxis } from './PlanetAxes'
@@ -12,7 +11,7 @@ import { PickSphere } from './PickSphere'
 import { PinMarker } from './PinMarker'
 import { Precipitation } from './Precipitation'
 import { Star } from './Star'
-import { Terrain } from './Terrain'
+import { TerrainTiles } from './Terrain'
 
 type GlobeSceneProps = {
   world: World
@@ -56,8 +55,13 @@ export function GlobeScene({
         <group rotation={[0, dayRad, 0]} name="daylight">
           <PickSphere />
           {!climateMap && <Ocean evenLight={fill} />}
-          {!climateMap && <Lakes params={world.globe} evenLight={fill} />}
-          <Terrain params={world.globe} evenLight={fill} overlay={overlay} />
+          <TerrainTiles
+            params={world.globe}
+            evenLight={fill}
+            overlay={overlay}
+            lite={lite}
+            showLakes={!climateMap}
+          />
           {!climateMap && !lite && (
             <Precipitation params={world.globe} evenLight={fill} />
           )}

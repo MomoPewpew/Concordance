@@ -135,7 +135,7 @@ export function RandomiserMenu({
           />
           <SliderField
             label="Resolution"
-            hint="Mesh density. Higher is sharper coasts, slower to generate"
+            hint="Near-camera mesh density. Higher is sharper when zoomed in, slower to refine"
             value={settings.resolution}
             min={128}
             max={512}

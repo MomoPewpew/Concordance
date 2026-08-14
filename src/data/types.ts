@@ -37,7 +37,7 @@ export type GlobeParams = {
   seaLevel: number
   /** Multiplier from worldgen height to radial displacement. */
   heightScale: number
-  /** Grid resolution per cube-sphere face (verts per edge ≈ resolution + 1). */
+  /** Quality knob for near-camera tile density (128–512). */
   resolution: number
   /** Shift continentalness down for more ocean, up for more land. */
   oceanBias: number

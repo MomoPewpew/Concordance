@@ -6,20 +6,29 @@ import {
   terrainFragmentShader,
   terrainVertexShader,
 } from '../shaders/globeShaders'
-import { generateTerrain } from '../worldgen/generateTerrain'
+import { Lakes } from './Lakes'
 import { ROCK_COLOR, SAND_COLOR, SNOW_COLOR, STAR_DIRECTION } from './lighting'
 import { emptyCubeMap, useBakedMaps } from './useBakedMaps'
 import { useFillLight } from './useFillLight'
 import { useOverlay } from './useOverlay'
+import { useTerrainTiles } from './useTerrainTiles'
 
-type TerrainProps = {
+type TerrainTilesProps = {
   params: GlobeParams
   evenLight: boolean
   overlay: OverlayMode
+  lite?: boolean
+  showLakes?: boolean
 }
 
-export function Terrain({ params, evenLight, overlay }: TerrainProps) {
-  const geometry = useMemo(() => generateTerrain(params), [params])
+export function TerrainTiles({
+  params,
+  evenLight,
+  overlay,
+  lite = false,
+  showLakes = true,
+}: TerrainTilesProps) {
+  const { tiles, groupRef } = useTerrainTiles(params, lite)
   const baked = useBakedMaps(params)
 
   const material = useMemo(
@@ -60,5 +69,23 @@ export function Terrain({ params, evenLight, overlay }: TerrainProps) {
   useFillLight(material, evenLight)
   useOverlay(material, overlay)
 
-  return <mesh geometry={geometry} material={material} name="terrain" />
+  useEffect(() => {
+    return () => {
+      material.dispose()
+    }
+  }, [material])
+
+  return (
+    <group ref={groupRef} name="terrain-tiles">
+      {tiles.map((tile) => (
+        <mesh
+          key={tile.id}
+          geometry={tile.terrain}
+          material={material}
+          name={`terrain-${tile.id}`}
+        />
+      ))}
+      {showLakes && <Lakes tiles={tiles} evenLight={evenLight} />}
+    </group>
+  )
 }

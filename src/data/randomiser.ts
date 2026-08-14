@@ -15,7 +15,7 @@ export type RandomiserSettings = {
   roughness: number
   /** 0 = broad climate bands, 1 = patchier biomes. */
   climateVariation: number
-  /** Cube-sphere verts per face edge. */
+  /** Near-camera tile density quality knob (128–512). */
   resolution: number
   /** Polar flattening. 0 = sphere. */
   flattening: number

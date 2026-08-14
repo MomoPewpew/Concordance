@@ -1,22 +1,19 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { ShaderMaterial } from 'three'
-import type { GlobeParams } from '../data/types'
 import {
   oceanFragmentShader,
   oceanVertexShader,
 } from '../shaders/globeShaders'
-import { generateLakes } from '../worldgen/generateTerrain'
 import { LAKE_DEEP, LAKE_SHALLOW, STAR_DIRECTION } from './lighting'
 import { useFillLight } from './useFillLight'
+import type { TileView } from './useTerrainTiles'
 
 type LakesProps = {
-  params: GlobeParams
+  tiles: TileView[]
   evenLight: boolean
 }
 
-export function Lakes({ params, evenLight }: LakesProps) {
-  const geometry = useMemo(() => generateLakes(params), [params])
-
+export function Lakes({ tiles, evenLight }: LakesProps) {
   const material = useMemo(
     () =>
       new ShaderMaterial({
@@ -34,14 +31,25 @@ export function Lakes({ params, evenLight }: LakesProps) {
 
   useFillLight(material, evenLight)
 
-  if (!geometry) return null
+  useEffect(() => {
+    return () => {
+      material.dispose()
+    }
+  }, [material])
 
   return (
-    <mesh
-      geometry={geometry}
-      material={material}
-      name="lakes"
-      renderOrder={1}
-    />
+    <>
+      {tiles.map((tile) =>
+        tile.lakes ? (
+          <mesh
+            key={tile.id}
+            geometry={tile.lakes}
+            material={material}
+            name={`lakes-${tile.id}`}
+            renderOrder={1}
+          />
+        ) : null,
+      )}
+    </>
   )
 }
