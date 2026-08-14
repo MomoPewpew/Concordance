@@ -27,7 +27,7 @@ export const BIOME = {
 
 export type BiomeId = (typeof BIOME)[keyof typeof BIOME]
 
-const SRGB: Record<BiomeId, [number, number, number]> = {
+export const BIOME_SRGB: Record<BiomeId, [number, number, number]> = {
   frozen_ocean: [0.78, 0.86, 0.9],
   cold_ocean: [0.12, 0.28, 0.42],
   ocean: [0.08, 0.32, 0.58],
@@ -53,8 +53,8 @@ const SRGB: Record<BiomeId, [number, number, number]> = {
 
 export const BIOME_COLORS: Record<BiomeId, [number, number, number]> = (() => {
   const out = {} as Record<BiomeId, [number, number, number]>
-  for (const id of Object.keys(SRGB) as BiomeId[]) {
-    const [r, g, b] = SRGB[id]
+  for (const id of Object.keys(BIOME_SRGB) as BiomeId[]) {
+    const [r, g, b] = BIOME_SRGB[id]
     out[id] = [srgbToLinear(r), srgbToLinear(g), srgbToLinear(b)]
   }
   return out

@@ -12,6 +12,9 @@ type RandomiserMenuProps = {
   onGenerate: () => void
   onRebuild: () => void
   onCopySeed: () => void
+  comparing: boolean
+  onCompare: () => void
+  onCloseCompare: () => void
 }
 
 function percent(value: number): string {
@@ -29,6 +32,9 @@ export function RandomiserMenu({
   onGenerate,
   onRebuild,
   onCopySeed,
+  comparing,
+  onCompare,
+  onCloseCompare,
 }: RandomiserMenuProps) {
   const patch = (partial: Partial<RandomiserSettings>) => {
     onSettingsChange({ ...settings, ...partial })
@@ -150,6 +156,23 @@ export function RandomiserMenu({
                 {generating ? 'Generating…' : 'New seed'}
               </button>
             </div>
+            <button
+              type="button"
+              className="randomiser-generate randomiser-generate-secondary"
+              disabled={generating}
+              onClick={onCompare}
+            >
+              {comparing ? 'New compare seed' : 'Compare another seed'}
+            </button>
+            {comparing && (
+              <button
+                type="button"
+                className="randomiser-generate randomiser-generate-secondary"
+                onClick={onCloseCompare}
+              >
+                Close compare
+              </button>
+            )}
           </div>
         </div>
       )}

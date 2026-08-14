@@ -1,7 +1,10 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { Raycaster, Spherical, Vector2, Vector3, type Object3D } from 'three'
+import type { LookTarget } from '../data/types'
 import { clamp, smoothstep } from '../worldgen/noise'
+import { directionToLatLon, latLonToDirection } from '../worldgen/probe'
+import { planetLocalToWorld, planetWorldToLocal } from './planetFrame'
 
 const SURFACE_RADIUS = 1
 const MIN_ALTITUDE = 0.17
@@ -20,11 +23,24 @@ function pitchFromAltitude(altitude: number): number {
 }
 
 type GlobeControlsProps = {
+  interactive?: boolean
+  axialTilt: number
+  dayAngle: number
+  lookTarget?: LookTarget | null
+  onViewChange?: (lat: number, lon: number) => void
   onPickSurface?: (x: number, y: number, z: number) => void
   onSelectPin?: (articleId: string) => void
 }
 
-export function GlobeControls({ onPickSurface, onSelectPin }: GlobeControlsProps) {
+export function GlobeControls({
+  interactive = true,
+  axialTilt,
+  dayAngle,
+  lookTarget,
+  onViewChange,
+  onPickSurface,
+  onSelectPin,
+}: GlobeControlsProps) {
   const camera = useThree((s) => s.camera)
   const gl = useThree((s) => s.gl)
   const scene = useThree((s) => s.scene)
@@ -49,6 +65,13 @@ export function GlobeControls({ onPickSurface, onSelectPin }: GlobeControlsProps
   const raycaster = useRef(new Raycaster())
   const ndc = useRef(new Vector2())
   const pickPoint = useRef(new Vector3())
+  const tiltRef = useRef(axialTilt)
+  const dayRef = useRef(dayAngle)
+  const viewAcc = useRef(0)
+  const onViewChangeRef = useRef(onViewChange)
+  tiltRef.current = axialTilt
+  dayRef.current = dayAngle
+  onViewChangeRef.current = onViewChange
 
   useEffect(() => {
     spherical.current.setFromVector3(camera.position)
@@ -63,6 +86,25 @@ export function GlobeControls({ onPickSurface, onSelectPin }: GlobeControlsProps
     goalAltitude.current = altitude.current
     primed.current = true
   }, [camera])
+
+  useEffect(() => {
+    if (!lookTarget) return
+    const [lx, ly, lz] = latLonToDirection(lookTarget.lat, lookTarget.lon)
+    const [wx, wy, wz] = planetLocalToWorld(
+      lx,
+      ly,
+      lz,
+      tiltRef.current,
+      dayRef.current,
+    )
+    spherical.current.setFromVector3(new Vector3(wx, wy, wz))
+    goalTheta.current = spherical.current.theta
+    goalPhi.current = clamp(
+      spherical.current.phi,
+      POLE_EPS,
+      Math.PI - POLE_EPS,
+    )
+  }, [lookTarget])
 
   useEffect(() => {
     const el = gl.domElement
@@ -84,7 +126,7 @@ export function GlobeControls({ onPickSurface, onSelectPin }: GlobeControlsProps
         el.releasePointerCapture(event.pointerId)
       }
       el.style.cursor = 'grab'
-      if (commitClick && wasClick) {
+      if (commitClick && wasClick && interactive) {
         pickAt(event.clientX, event.clientY)
       }
     }
@@ -167,7 +209,7 @@ export function GlobeControls({ onPickSurface, onSelectPin }: GlobeControlsProps
       el.removeEventListener('pointermove', onPointerMove)
       el.removeEventListener('wheel', onWheel)
     }
-  }, [camera, gl, scene, onPickSurface, onSelectPin])
+  }, [camera, gl, scene, interactive, onPickSurface, onSelectPin])
 
   useFrame((_, delta) => {
     if (!primed.current) return
@@ -200,6 +242,20 @@ export function GlobeControls({ onPickSurface, onSelectPin }: GlobeControlsProps
 
     camera.up.copy(tangentUp.current)
     camera.lookAt(P.current)
+
+    viewAcc.current += delta
+    if (viewAcc.current > 0.1) {
+      viewAcc.current = 0
+      const [lx, ly, lz] = planetWorldToLocal(
+        P.current.x,
+        P.current.y,
+        P.current.z,
+        tiltRef.current,
+        dayRef.current,
+      )
+      const { lat, lon } = directionToLatLon(lx, ly, lz)
+      onViewChangeRef.current?.(lat, lon)
+    }
   })
 
   return null

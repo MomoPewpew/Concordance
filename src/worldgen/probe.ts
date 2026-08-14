@@ -1,7 +1,11 @@
 import type { GlobeParams } from '../data/types'
 import type { BiomeId } from './biomes'
 import { pickBiome } from './biomes'
-import { createClimateSamplers, sampleClimate } from './climate'
+import {
+  createClimateSamplers,
+  sampleClimate,
+  type ClimateSamplers,
+} from './climate'
 import { applyLapseRate, heightFromClimate } from './height'
 import { clamp } from './noise'
 
@@ -44,12 +48,12 @@ export function probeSurface(
   x: number,
   y: number,
   z: number,
+  samplers: ClimateSamplers = createClimateSamplers(params.seed),
 ): SurfaceProbe {
   const n = Math.hypot(x, y, z) || 1
   const dx = x / n
   const dy = y / n
   const dz = z / n
-  const samplers = createClimateSamplers(params.seed)
   const climate = sampleClimate(dx, dy, dz, params, samplers)
   const height = heightFromClimate(climate)
   const elevation = height * params.heightScale

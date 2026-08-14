@@ -24,6 +24,8 @@ type ViewMenuProps = {
   onDayAngleChange: (angle: number) => void
   daylightPlaying: boolean
   onDaylightPlayingChange: (playing: boolean) => void
+  showFlow: boolean
+  onShowFlowChange: (show: boolean) => void
   onPreset: (preset: 'atlas' | 'space' | 'climate') => void
 }
 
@@ -40,11 +42,14 @@ export function ViewMenu({
   onDayAngleChange,
   daylightPlaying,
   onDaylightPlayingChange,
+  showFlow,
+  onShowFlowChange,
   onPreset,
 }: ViewMenuProps) {
   const spinId = useId()
   const fillId = useId()
   const overlayId = useId()
+  const flowId = useId()
 
   return (
     <div className="chrome-menu">
@@ -117,6 +122,21 @@ export function ViewMenu({
               <span className="view-menu-item-title">Light from all sides</span>
               <span className="view-menu-item-hint">
                 Fill the night side so the whole globe is readable.
+              </span>
+            </span>
+          </label>
+          <label className="view-menu-item" htmlFor={flowId}>
+            <input
+              id={flowId}
+              type="checkbox"
+              checked={showFlow}
+              onChange={(event) => onShowFlowChange(event.target.checked)}
+            />
+            <span className="view-menu-item-text">
+              <span className="view-menu-item-title">Wind and currents</span>
+              <span className="view-menu-item-hint">
+                White strokes are prevailing winds. Teal strokes are ocean
+                flow, stronger along coasts.
               </span>
             </span>
           </label>

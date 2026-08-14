@@ -24,9 +24,11 @@ npm run lint    # oxlint
 - Height-displaced land on a cube-sphere, ocean at a spherical sea level, fresnel atmosphere, homosphere clouds
 - Biomes from Minecraft 1.18-style climate: continentalness, erosion, weirdness, temperature, humidity
 - Land shading from biome, slope, and elevation (beaches, rock, snow)
-- **View** menu: spin/orbit axes, even lighting, daylight, climate overlays, view presets
-- **Randomiser** menu: tilt, oceans, mountains, continents, roughness, climate, resolution, seed
-- Click the surface to drop a pin; an article stub docks on the right
+- **View** menu: spin/orbit axes, even lighting, daylight, climate overlays, view presets, wind and currents
+- **Randomiser** menu: tilt, oceans, mountains, continents, roughness, climate, resolution, seed, compare
+- Named peaks, basins, and islands are auto-pinned; click the globe to add your own
+- Equirectangular minimap strip; click it to look at that longitude
+- Split view to compare two seeds with the same sliders
 
 ## Worldgen
 
@@ -48,10 +50,10 @@ Articles, auth, persistence, and a full editor are still ahead. Pins and article
 ```
 src/
   globe/       canvas, terrain, ocean, atmosphere, clouds, axes
-  worldgen/    noise, climate, height, biomes, mesh
+  worldgen/    noise, climate, height, biomes, features, flow, minimap, mesh
   shaders/     terrain, ocean, atmosphere, clouds
   data/        types, sample world, randomiser mappings
-  ui/          View, Randomiser, article dock
+  ui/          View, Randomiser, article dock, minimap
 ```
 
 ## Out of scope

@@ -18,6 +18,45 @@ function formatCoord(lat: number, lon: number): string {
   return `${Math.abs(lat).toFixed(1)}°${ns}  ${Math.abs(lon).toFixed(1)}°${ew}`
 }
 
+function kindLabel(article: Article): string {
+  if (article.feature === 'peak') return 'Peak'
+  if (article.feature === 'basin') return 'Basin'
+  if (article.feature === 'island') return 'Island'
+  return 'Pin'
+}
+
+function ArticleList({
+  articles,
+  selectedId,
+  onSelect,
+}: {
+  articles: Article[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+}) {
+  if (articles.length === 0) return null
+  return (
+    <ul className="article-dock-list">
+      {articles.map((article) => (
+        <li key={article.id}>
+          <button
+            type="button"
+            className={
+              article.id === selectedId
+                ? 'article-dock-item article-dock-item-active'
+                : 'article-dock-item'
+            }
+            onClick={() => onSelect(article.id)}
+          >
+            <span>{article.title || 'Untitled'}</span>
+            <span className="article-dock-kind">{kindLabel(article)}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export function ArticleDock({
   articles,
   selectedId,
@@ -28,35 +67,38 @@ export function ArticleDock({
   onClose,
 }: ArticleDockProps) {
   const selected = articles.find((a) => a.id === selectedId) ?? null
+  const features = articles.filter((article) => article.feature)
+  const pins = articles.filter((article) => !article.feature)
 
   return (
     <aside className="article-dock">
       <div className="article-dock-head">
-        <span>Article</span>
+        <span>Places</span>
         {selected && (
           <button type="button" className="article-dock-close" onClick={onClose}>
             Close
           </button>
         )}
       </div>
-      {articles.length > 0 && (
-        <ul className="article-dock-list">
-          {articles.map((article) => (
-            <li key={article.id}>
-              <button
-                type="button"
-                className={
-                  article.id === selectedId
-                    ? 'article-dock-item article-dock-item-active'
-                    : 'article-dock-item'
-                }
-                onClick={() => onSelect(article.id)}
-              >
-                {article.title || 'Untitled'}
-              </button>
-            </li>
-          ))}
-        </ul>
+      {features.length > 0 && (
+        <>
+          <p className="article-dock-section">Named features</p>
+          <ArticleList
+            articles={features}
+            selectedId={selectedId}
+            onSelect={onSelect}
+          />
+        </>
+      )}
+      {pins.length > 0 && (
+        <>
+          <p className="article-dock-section">Your pins</p>
+          <ArticleList
+            articles={pins}
+            selectedId={selectedId}
+            onSelect={onSelect}
+          />
+        </>
       )}
       {selected && probe && (
         <div className="article-dock-body">
@@ -67,7 +109,7 @@ export function ArticleDock({
             placeholder="Title"
           />
           <p className="article-dock-meta">
-            {biomeLabel(probe.biome)}
+            {kindLabel(selected)} · {biomeLabel(probe.biome)}
             <br />
             {formatCoord(probe.lat, probe.lon)}
             <br />
@@ -87,7 +129,10 @@ export function ArticleDock({
         </div>
       )}
       {!selected && (
-        <p className="article-dock-hint">Click the globe to pin a place.</p>
+        <p className="article-dock-hint">
+          Named features come from the climate field. Click the globe to pin
+          another place.
+        </p>
       )}
     </aside>
   )

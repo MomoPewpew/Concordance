@@ -50,6 +50,9 @@ export type GlobeParams = {
   humidity: NoiseLayer
 }
 
+/** Auto-named landform from the climate field. */
+export type FeatureKind = 'peak' | 'basin' | 'island'
+
 /** Pin on a world. Lat/lon in degrees. */
 export type ArticlePin = {
   worldId: string
@@ -65,4 +68,12 @@ export type Article = {
   title: string
   body: string
   pin?: ArticlePin
+  /** Set when the article was generated from a named feature. */
+  feature?: FeatureKind
+}
+
+export type LookTarget = {
+  lat: number
+  lon: number
+  nonce: number
 }

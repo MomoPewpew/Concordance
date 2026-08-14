@@ -7,12 +7,14 @@ import {
 } from './data/randomiser'
 import type { OverlayMode } from './data/overlay'
 import { sampleWorld } from './data/sampleWorld'
-import type { Article } from './data/types'
+import type { Article, LookTarget, World } from './data/types'
 import { Globe } from './globe/Globe'
 import { ArticleDock } from './ui/ArticleDock'
+import { Minimap } from './ui/Minimap'
 import { RandomiserMenu } from './ui/RandomiserMenu'
 import { ViewMenu } from './ui/ViewMenu'
 import { biomeLabel } from './worldgen/biomes'
+import { articlesFromFeatures } from './worldgen/features'
 import { latLonToDirection, probeSurface } from './worldgen/probe'
 
 function parseSeed(raw: string, fallback: number): number {
@@ -41,6 +43,7 @@ export default function App() {
   const [viewOpen, setViewOpen] = useState(false)
   const [randomiserOpen, setRandomiserOpen] = useState(false)
   const [showSpinAxis, setShowSpinAxis] = useState(false)
+  const [showFlow, setShowFlow] = useState(true)
   const [evenLight, setEvenLight] = useState(false)
   const [overlay, setOverlay] = useState<OverlayMode>('none')
   const [dayAngle, setDayAngle] = useState(0)
@@ -49,12 +52,17 @@ export default function App() {
     defaultRandomiserSettings,
   )
   const [world, setWorld] = useState(sampleWorld)
+  const [compareWorld, setCompareWorld] = useState<World | null>(null)
   const [seedDraft, setSeedDraft] = useState(String(sampleWorld.globe.seed))
   const [generating, setGenerating] = useState(false)
-  const [articles, setArticles] = useState<Article[]>([])
+  const [articles, setArticles] = useState<Article[]>(() =>
+    articlesFromFeatures(sampleWorld),
+  )
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [lookTarget, setLookTarget] = useState<LookTarget | null>(null)
   const articlesRef = useRef(articles)
   articlesRef.current = articles
+  const viewRef = useRef({ lat: 0, lon: 0 })
 
   useEffect(() => {
     if (!viewOpen && !randomiserOpen) return
@@ -84,7 +92,7 @@ export default function App() {
   useEffect(() => {
     setGenerating(false)
     setSeedDraft(String(world.globe.seed))
-  }, [world])
+  }, [world, compareWorld])
 
   useEffect(() => {
     if (!daylightPlaying) return
@@ -97,10 +105,15 @@ export default function App() {
     return () => cancelAnimationFrame(frame)
   }, [daylightPlaying])
 
-  const applyWorld = (next: typeof world) => {
+  const lookAt = useCallback((lat: number, lon: number) => {
+    setLookTarget({ lat, lon, nonce: Date.now() })
+  }, [])
+
+  const applyWorld = (next: World) => {
     setWorld(next)
-    setArticles([])
+    setArticles(articlesFromFeatures(next))
     setSelectedId(null)
+    setCompareWorld(null)
   }
 
   const generate = () => {
@@ -118,6 +131,15 @@ export default function App() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         applyWorld(createWorld(settings, seed))
+      })
+    })
+  }
+
+  const compare = () => {
+    setGenerating(true)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setCompareWorld(createWorld(settings, randomSeed()))
       })
     })
   }
@@ -171,6 +193,14 @@ export default function App() {
     setOverlay('temperature')
   }
 
+  const onSelectPlace = (id: string) => {
+    setSelectedId(id)
+    const article = articles.find((item) => item.id === id)
+    if (article?.pin) lookAt(article.pin.lat, article.pin.lon)
+  }
+
+  const comparing = compareWorld !== null
+
   return (
     <div className="app">
       <div className="app-menus" ref={menusRef}>
@@ -190,6 +220,8 @@ export default function App() {
           }}
           daylightPlaying={daylightPlaying}
           onDaylightPlayingChange={setDaylightPlaying}
+          showFlow={showFlow}
+          onShowFlowChange={setShowFlow}
           onPreset={onPreset}
         />
         <RandomiserMenu
@@ -203,24 +235,57 @@ export default function App() {
           onGenerate={generate}
           onRebuild={rebuild}
           onCopySeed={copySeed}
+          comparing={comparing}
+          onCompare={compare}
+          onCloseCompare={() => setCompareWorld(null)}
         />
       </div>
-      <Globe
-        world={world}
+      <div className={comparing ? 'app-globes app-globes-split' : 'app-globes'}>
+        <Globe
+          world={world}
+          articles={articles}
+          selectedArticleId={selectedId}
+          overlay={overlay}
+          showSpinAxis={showSpinAxis}
+          showFlow={showFlow}
+          dayAngle={dayAngle}
+          evenLight={evenLight}
+          label={comparing ? `Seed ${world.globe.seed}` : undefined}
+          lookTarget={lookTarget}
+          onViewChange={(lat, lon) => {
+            viewRef.current = { lat, lon }
+          }}
+          onPickSurface={onPickSurface}
+          onSelectPin={onSelectPlace}
+        />
+        {compareWorld && (
+          <Globe
+            world={compareWorld}
+            articles={[]}
+            selectedArticleId={null}
+            overlay={overlay}
+            showSpinAxis={showSpinAxis}
+            showFlow={showFlow}
+            dayAngle={dayAngle}
+            evenLight={evenLight}
+            lite
+            interactive={false}
+            label={`Seed ${compareWorld.globe.seed}`}
+          />
+        )}
+      </div>
+      <Minimap
+        params={world.globe}
         articles={articles}
-        selectedArticleId={selectedId}
-        overlay={overlay}
-        showSpinAxis={showSpinAxis}
-        dayAngle={dayAngle}
-        evenLight={evenLight}
-        onPickSurface={onPickSurface}
-        onSelectPin={setSelectedId}
+        selectedId={selectedId}
+        viewRef={viewRef}
+        onLookAt={lookAt}
       />
       <ArticleDock
         articles={articles}
         selectedId={selectedId}
         probe={selectedProbe}
-        onSelect={setSelectedId}
+        onSelect={onSelectPlace}
         onTitleChange={(id, title) =>
           setArticles((list) =>
             list.map((article) =>
