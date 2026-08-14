@@ -30,7 +30,7 @@ npm run lint    # oxlint
 - **View** menu: spin/orbit axes, even lighting, daylight, climate overlays, view presets, wind and currents
 - **Randomiser** menu: tilt, oceans, mountains, continents, roughness, climate, inland seas, flattening, resolution, seed, compare
 - Named peaks, basins, islands, and lakes are auto-pinned with atlas labels; click the globe to add your own
-- Height-field drainages, valley-hugging clouds, and denser forest on humid flats
+- Height-field rivers from mountains to the sea, valley-hugging clouds, and denser forest on humid flats
 - Equirectangular minimap strip; click it to look at that longitude
 - Split view to compare two seeds with the same sliders
 - Article editor with `[[wiki links]]`; the world and articles persist in the browser

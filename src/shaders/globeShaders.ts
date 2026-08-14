@@ -127,11 +127,6 @@ float triGrain(vec3 p, float freq) {
   return xy * w.z + yz * w.x + zx * w.y;
 }
 
-float riverBand(vec3 p, float sharp) {
-  float d = abs(vnoise(p) - 0.5) * 2.0;
-  return pow(clamp(1.0 - d, 0.0, 1.0), sharp);
-}
-
 vec3 srgb(float r, float g, float b) {
   vec3 c = vec3(r, g, b);
   vec3 lo = c / 12.92;
@@ -305,21 +300,9 @@ void main() {
 
   float landMask = smoothstep(0.0004, 0.003, elevN);
   float wet = smoothstep(-0.38, 0.08, vClimate.y);
-  float valley = smoothstep(-0.55, 0.12, vClimate.z);
   float notPeak = 1.0 - smoothstep(0.1, 0.24, height);
   float inland = smoothstep(-0.18, 0.0, vClimate.x);
-  float drain = landMask * wet * inland * notPeak * (1.0 - vLake);
-  drain *= mix(0.4, 1.0, valley);
-  drain *= 1.0 - smoothstep(0.18, 0.4, slope);
-
   vec3 flowP = local;
-  float warpR = fbm(flowP * 3.6 + uSeed + 3.1, close) - 0.5;
-  vec3 rp = flowP * 4.2 + vec3(warpR, -warpR, warpR * 0.7) * 0.85 + uSeed;
-  float major = riverBand(rp, mix(6.5, 10.0, close)) * 0.2;
-  float minor = riverBand(flowP * 9.4 + vec3(warpR) * 1.6 - uSeed, mix(7.2, 11.0, close)) * 0.4;
-  float creek = riverBand(flowP * 18.5 + uSeed * 0.7, 12.0) * mix(0.1, 0.55, close);
-  float rivers = max(major, max(minor, creek)) * drain;
-  rivers = smoothstep(0.16, 0.48, rivers);
 
   float pondN = vnoise(flowP * mix(7.5, 13.0, close) + 19.4 + uSeed);
   float basin =
@@ -331,9 +314,8 @@ void main() {
   float ponds =
     smoothstep(0.58, 0.74, pondN) * basin * mix(0.45, 1.0, uInlandSeas);
   ponds = smoothstep(0.2, 0.65, ponds);
-  float fresh = clamp(max(rivers, ponds * 0.9), 0.0, 1.0);
-  vec3 waterCol = mix(srgb(0.1, 0.38, 0.44), srgb(0.05, 0.2, 0.3), clamp(rivers * 1.3, 0.0, 1.0));
-  waterCol = mix(waterCol, srgb(0.12, 0.4, 0.42), ponds * (1.0 - rivers));
+  float fresh = clamp(ponds * 0.9, 0.0, 1.0);
+  vec3 waterCol = mix(srgb(0.1, 0.38, 0.44), srgb(0.12, 0.4, 0.42), ponds);
   float frozen = smoothstep(-0.18, -0.42, vTemperature);
   waterCol = mix(waterCol, srgb(0.72, 0.84, 0.9), frozen);
   if (uOverlay < 0.5) {
@@ -616,6 +598,77 @@ void main() {
   float dist = length(cameraPosition - vWorldPos);
   glitter *= 1.0 - smoothstep(0.58, 1.18, dist);
   lit += vec3(0.92, 0.97, 1.0) * glitter * 5.2;
+
+  gl_FragColor = vec4(lit, 1.0);
+}
+`
+
+export const riverVertexShader = /* glsl */ `
+attribute float aAcross;
+attribute float aFlow;
+attribute float aSize;
+
+varying vec3 vNormal;
+varying vec3 vWorldPos;
+varying float vAcross;
+varying float vFlow;
+varying float vSize;
+
+void main() {
+  vAcross = aAcross;
+  vFlow = aFlow;
+  vSize = aSize;
+  vNormal = normalize(mat3(modelMatrix) * normal);
+  vec4 world = modelMatrix * vec4(position, 1.0);
+  vWorldPos = world.xyz;
+  gl_Position = projectionMatrix * viewMatrix * world;
+}
+`
+
+export const riverFragmentShader = /* glsl */ `
+uniform vec3 uLightDir;
+uniform vec3 uDeepColor;
+uniform vec3 uShallowColor;
+uniform float uFill;
+uniform float uTime;
+
+varying vec3 vNormal;
+varying vec3 vWorldPos;
+varying float vAcross;
+varying float vFlow;
+varying float vSize;
+
+void main() {
+  float edge = abs(vAcross);
+  float alpha = 1.0 - smoothstep(0.78, 1.0, edge);
+  if (alpha < 0.05) discard;
+
+  vec3 N = normalize(vNormal);
+  vec3 V = normalize(cameraPosition - vWorldPos);
+  vec3 L = normalize(uLightDir);
+  float fresnel = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+
+  float channel = 1.0 - edge;
+  vec3 silt = vec3(0.07, 0.14, 0.1);
+  vec3 shallow = mix(uShallowColor, silt, 0.28);
+  float depth = channel * mix(0.28, 1.0, vSize);
+  vec3 albedo = mix(shallow, uDeepColor, depth);
+  albedo = mix(albedo, silt, smoothstep(0.55, 0.92, edge) * 0.55);
+  albedo = mix(albedo, albedo * 1.08 + uShallowColor * 0.08, fresnel * 0.35);
+
+  float ndl = dot(N, L);
+  float wrap = mix(ndl * 0.5 + 0.5, 1.0, uFill);
+  vec3 H = normalize(L + V);
+  float spec = pow(max(dot(N, H), 0.0), mix(48.0, 90.0, vSize)) * (1.0 - uFill);
+  spec *= channel * mix(0.18, 0.55, vSize);
+
+  vec3 lit = albedo * mix(0.18 + wrap * 0.82, 1.05, uFill);
+  lit += vec3(0.82, 0.92, 0.98) * spec * 0.42;
+  lit += uShallowColor * fresnel * channel * 0.12;
+
+  float bands = abs(sin(vFlow * 28.0 - uTime * 0.85 + vAcross * 1.8));
+  float flow = (1.0 - smoothstep(0.0, 0.42, bands)) * channel * 0.07 * (1.0 - uFill);
+  lit += uShallowColor * flow;
 
   gl_FragColor = vec4(lit, 1.0);
 }

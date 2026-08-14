@@ -69,7 +69,9 @@ export function GlobeScene({
           {!climateMap && !lite && (
             <Precipitation params={world.globe} evenLight={fill} />
           )}
-          {!climateMap && !lite && <Drainages params={world.globe} />}
+          {!climateMap && !lite && (
+            <Drainages params={world.globe} evenLight={fill} />
+          )}
           {!climateMap && (
             <Clouds
               seed={world.globe.seed}
