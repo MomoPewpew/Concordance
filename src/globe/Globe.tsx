@@ -1,7 +1,7 @@
-import { OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { ACESFilmicToneMapping } from 'three'
 import type { World } from '../data/types'
+import { GlobeControls } from './GlobeControls'
 import { GlobeScene } from './GlobeScene'
 import { Starfield } from './Starfield'
 
@@ -25,15 +25,7 @@ export function Globe({ world, showSpinAxis }: GlobeProps) {
       <color attach="background" args={['#02010a']} />
       <Starfield />
       <GlobeScene world={world} showSpinAxis={showSpinAxis} />
-      <OrbitControls
-        enablePan={false}
-        enableDamping
-        dampingFactor={0.08}
-        minDistance={1.12}
-        maxDistance={5}
-        rotateSpeed={0.45}
-        zoomSpeed={0.7}
-      />
+      <GlobeControls />
     </Canvas>
   )
 }
