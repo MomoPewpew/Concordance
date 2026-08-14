@@ -170,22 +170,46 @@ void main() {
   float slope = 1.0 - clamp(dot(N, radial), 0.0, 1.0);
 
   float height = vElevation / max(uHeightScale, 1.0e-5);
-  float mottling = (fbm(radial * 28.0 + uSeed, close) - 0.5) * mix(0.012, 0.045, close);
   vec3 local = normalize(vLocal);
-  vec3 col = pickBiomeColor(
-    vClimate.x,
-    vClimate.y + mottling * 0.35,
-    vClimate.z,
+
+  float nLo = fbm(radial * mix(22.0, 52.0, close) + uSeed, close);
+  float nMid = fbm(radial * mix(55.0, 130.0, close) - uSeed, close);
+  float nHi = fbm(radial * mix(110.0, 260.0, close) + uSeed * 1.31, 1.0);
+  vec3 warp = vec3(nLo, nMid, nHi) - 0.5;
+  float warpAmp = mix(0.038, 0.11, close);
+  float cont = vClimate.x + warp.x * warpAmp * 0.5;
+  float hum = vClimate.y + warp.y * warpAmp * 1.15;
+  float ero = vClimate.z + warp.z * warpAmp * 0.6;
+  float temp = vTemperature + warp.x * warpAmp * 0.7 + warp.z * warpAmp * 0.22;
+
+  vec3 colA = pickBiomeColor(cont, hum, ero, height, temp);
+  vec3 colB = pickBiomeColor(
+    cont + warp.y * 0.06,
+    hum + warp.z * 0.09,
+    ero + warp.x * 0.045,
     height,
-    vTemperature + mottling * 0.2
+    temp + warp.y * 0.055
   );
+  float dither = smoothstep(0.26, 0.74, nHi * 0.62 + nMid * 0.38);
+  vec3 col = mix(colA, colB, dither * mix(0.42, 0.78, close));
+
   if (uHasMaps > 0.5 && uOverlay < 0.5) {
-    vec4 baked = textureCube(uMaps, local);
+    vec3 w1 = warp * mix(0.0036, 0.012, close);
+    vec4 baked = textureCube(uMaps, normalize(local + w1));
     if (baked.a > 0.502) {
-      col = srgb(baked.r, baked.g, baked.b);
+      vec3 b0 = srgb(baked.r, baked.g, baked.b);
+      vec4 baked2 = textureCube(
+        uMaps,
+        normalize(local + vec3(w1.y, w1.z, -w1.x) * 1.45)
+      );
+      vec3 b1 = srgb(baked2.r, baked2.g, baked2.b);
+      float edge = clamp(length(b0 - b1) * 3.6 + length(b0 - colA) * 1.5, 0.0, 1.0);
+      vec3 noisy = mix(b0, mix(col, b1, dither), nMid);
+      col = mix(b0, noisy, edge);
     }
   }
   col = mix(col, srgb(0.12, 0.42, 0.48), smoothstep(0.25, 0.75, vLake));
+  col *= 1.0 + (nLo - 0.5) * mix(0.05, 0.14, close);
 
   float bumpFreq = mix(22.0, 96.0, close);
   vec3 bp = radial * bumpFreq + uSeed;
