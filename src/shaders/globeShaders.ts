@@ -53,6 +53,7 @@ uniform float uHeightScale;
 uniform float uSeed;
 uniform samplerCube uMaps;
 uniform float uHasMaps;
+uniform float uInlandSeas;
 
 varying vec3 vNormal;
 varying vec3 vWorldPos;
@@ -94,6 +95,11 @@ float fbm(vec3 p, float extra) {
   a += 0.125 * vnoise(p * 4.07);
   a += extra * 0.0625 * vnoise(p * 8.13);
   return a;
+}
+
+float riverBand(vec3 p, float sharp) {
+  float d = abs(vnoise(p) - 0.5) * 2.0;
+  return pow(clamp(1.0 - d, 0.0, 1.0), sharp);
 }
 
 vec3 srgb(float r, float g, float b) {
@@ -211,6 +217,43 @@ void main() {
   col = mix(col, srgb(0.12, 0.42, 0.48), smoothstep(0.25, 0.75, vLake));
   col *= 1.0 + (nLo - 0.5) * mix(0.05, 0.14, close);
 
+  float landMask = smoothstep(0.0004, 0.003, elevN);
+  float wet = smoothstep(-0.38, 0.08, vClimate.y);
+  float valley = smoothstep(-0.55, 0.12, vClimate.z);
+  float notPeak = 1.0 - smoothstep(0.1, 0.24, height);
+  float inland = smoothstep(-0.18, 0.0, vClimate.x);
+  float drain = landMask * wet * inland * notPeak * (1.0 - vLake);
+  drain *= mix(0.4, 1.0, valley);
+  drain *= 1.0 - smoothstep(0.18, 0.4, slope);
+
+  vec3 flowP = local;
+  float warpR = fbm(flowP * 3.6 + uSeed + 3.1, close) - 0.5;
+  vec3 rp = flowP * 4.2 + vec3(warpR, -warpR, warpR * 0.7) * 0.85 + uSeed;
+  float major = riverBand(rp, mix(5.5, 8.5, close));
+  float minor = riverBand(flowP * 9.4 + vec3(warpR) * 1.6 - uSeed, mix(6.5, 10.0, close));
+  float creek = riverBand(flowP * 18.5 + uSeed * 0.7, 11.0) * mix(0.15, 1.0, close);
+  float rivers = max(major, max(minor * 0.85, creek * 0.55)) * drain;
+  rivers = smoothstep(0.12, 0.42, rivers);
+
+  float pondN = vnoise(flowP * mix(7.5, 13.0, close) + 19.4 + uSeed);
+  float basin =
+    landMask *
+    wet *
+    inland *
+    notPeak *
+    smoothstep(-0.2, 0.15, vClimate.z);
+  float ponds =
+    smoothstep(0.58, 0.74, pondN) * basin * mix(0.45, 1.0, uInlandSeas);
+  ponds = smoothstep(0.2, 0.65, ponds);
+  float fresh = clamp(max(rivers, ponds * 0.9), 0.0, 1.0);
+  vec3 waterCol = mix(srgb(0.1, 0.38, 0.44), srgb(0.05, 0.2, 0.3), clamp(rivers * 1.3, 0.0, 1.0));
+  waterCol = mix(waterCol, srgb(0.12, 0.4, 0.42), ponds * (1.0 - rivers));
+  float frozen = smoothstep(-0.18, -0.42, vTemperature);
+  waterCol = mix(waterCol, srgb(0.72, 0.84, 0.9), frozen);
+  if (uOverlay < 0.5) {
+    col = mix(col, waterCol, fresh);
+  }
+
   float bumpFreq = mix(22.0, 96.0, close);
   vec3 bp = radial * bumpFreq + uSeed;
   float eps = 0.035;
@@ -221,29 +264,32 @@ void main() {
   );
   float dry = smoothstep(0.05, -0.2, vClimate.y);
   float bumpAmp = mix(0.1, 0.55, close) * (0.35 + slope * 1.4 + dry * 0.5);
+  bumpAmp *= 1.0 - fresh * 0.92;
   N = normalize(N + (grad - radial * dot(grad, radial)) * bumpAmp);
+  N = normalize(mix(N, radial, fresh * 0.62));
 
   slope = 1.0 - clamp(dot(N, radial), 0.0, 1.0);
 
-  float rockMix = smoothstep(0.12, 0.42, slope);
+  float rockMix = smoothstep(0.12, 0.42, slope) * (1.0 - fresh);
   col = mix(col, uRockColor, rockMix * 0.92);
 
   float beach = (1.0 - smoothstep(0.0, 0.0035, elevN)) * (1.0 - rockMix);
-  beach *= smoothstep(-0.22, 0.08, vTemperature);
+  beach *= smoothstep(-0.22, 0.08, vTemperature) * (1.0 - fresh);
   col = mix(col, uSandColor, beach);
 
   float foam = (1.0 - smoothstep(0.0, 0.0016, elevN)) * (1.0 - rockMix);
-  foam *= smoothstep(-0.15, 0.2, vTemperature);
+  foam *= smoothstep(-0.15, 0.2, vTemperature) * (1.0 - fresh * 0.5);
   col = mix(col, vec3(0.82, 0.9, 0.92), foam * 0.45);
 
   float snowTemp = smoothstep(0.08, -0.28, vTemperature);
   float snowHeight = smoothstep(0.02, 0.04, vElevation);
   float snowSlope = 1.0 - smoothstep(0.38, 0.72, slope);
   float snow = max(snowTemp * snowHeight, snowTemp * 0.35 * smoothstep(0.008, 0.03, vElevation));
+  snow *= 1.0 - fresh * (1.0 - frozen);
   col = mix(col, uSnowColor, clamp(snow * snowSlope, 0.0, 1.0) * 0.9);
 
   float grain = fbm(vWorldPos * mix(40.0, 180.0, close) + uSeed, close);
-  col *= 0.93 + grain * mix(0.08, 0.16, close);
+  col *= 0.93 + grain * mix(0.08, 0.16, close) * (1.0 - fresh * 0.65);
 
   float t = clamp(vTemperature * 0.5 + 0.5, 0.0, 1.0);
   vec3 tempCol = mix(vec3(0.12, 0.28, 0.85), vec3(0.95, 0.95, 0.98), smoothstep(0.0, 0.5, t));
@@ -269,7 +315,7 @@ void main() {
   float ambient = mix(0.18, 0.38, uFill);
   vec3 lit = col * (ambient + wrap * 0.88);
 
-  float specMask = snow * 0.35 + rockMix * 0.08;
+  float specMask = snow * 0.35 + rockMix * 0.08 + fresh * mix(0.22, 0.5, 1.0 - frozen);
   vec3 V = normalize(cameraPosition - vWorldPos);
   vec3 H = normalize(L + V);
   float spec = pow(max(dot(N, H), 0.0), 48.0) * specMask;

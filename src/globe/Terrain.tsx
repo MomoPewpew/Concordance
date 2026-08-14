@@ -47,6 +47,7 @@ export function TerrainTiles({
           uSeed: { value: 0 },
           uMaps: { value: emptyCubeMap() },
           uHasMaps: { value: 0 },
+          uInlandSeas: { value: 0 },
         },
         vertexColors: false,
         polygonOffset: true,
@@ -59,7 +60,8 @@ export function TerrainTiles({
   useEffect(() => {
     material.uniforms.uHeightScale.value = params.heightScale
     material.uniforms.uSeed.value = (params.seed % 10000) * 0.017
-  }, [material, params.heightScale, params.seed])
+    material.uniforms.uInlandSeas.value = params.inlandSeas ?? 0
+  }, [material, params.heightScale, params.seed, params.inlandSeas])
 
   useEffect(() => {
     material.uniforms.uMaps.value = baked ?? emptyCubeMap()

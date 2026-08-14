@@ -80,7 +80,7 @@ function toFeature(
       : kind === 'basin'
         ? `A depression in the ${where}. Named from the height field.\n\nWrite about it, and link other places with [[Title]].`
         : kind === 'lake'
-          ? `An inland sea in the ${where}. The water table sits above the global ocean.\n\nWrite about it, and link other places with [[Title]].`
+          ? `Fresh water in the ${where}. Inland seas, lakes, and wet basins from the climate field.\n\nWrite about it, and link other places with [[Title]].`
           : `A landmass in the ${where}. Named from the climate field.\n\nWrite about it, and link other places with [[Title]].`
   return {
     kind,
@@ -180,6 +180,25 @@ export function findFeatures(params: GlobeParams): WorldFeature[] {
     0.9,
   )
 
+  pickLocal(
+    cells,
+    'lake',
+    params,
+    picked,
+    (cell, ring) => {
+      if (!cell.land || cell.lake) return false
+      if (cell.humidity < 0.04) return false
+      if (cell.elevation < 0.002 || cell.elevation > 0.03) return false
+      if (ring.length < 6) return false
+      const inland = ring.filter((n) => n.land).length >= 6
+      const mean = ring.reduce((s, n) => s + n.elevation, 0) / ring.length
+      return inland && cell.elevation + 0.0035 < mean
+    },
+    (a, b) => a.elevation - b.elevation,
+    4,
+    0.88,
+  )
+
   const parent = new Array(cells.length).fill(-1)
   const find = (a: number): number => {
     let i = a
@@ -273,7 +292,7 @@ export function findFeatures(params: GlobeParams): WorldFeature[] {
     .sort((a, b) => b.length - a.length)
 
   for (const group of lakeGroups) {
-    if (picked.filter((f) => f.kind === 'lake').length >= 4) break
+    if (picked.filter((f) => f.kind === 'lake').length >= 6) break
     const mid = group[Math.floor(group.length / 2)]
     if (!angularlyFar(picked, mid.lat, mid.lon, 0.9)) continue
     picked.push(toFeature('lake', mid, params))

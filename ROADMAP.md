@@ -10,6 +10,7 @@ Ideas from the globe POC. The goal is still the same: this has to feel like **a 
 4. Article editor — `[[wiki links]]`, persistence
 5. Apparent resolution — pixel biomes, noisy coasts, bump, heightlets, distance octaves, baked cubemap
 6. Streaming cube-sphere tiles — coarse globe immediately, worker refines nearby patches, skirts at LOD seams
+7. Fresh water — valley rivers and small ponds in the terrain shader; inland seas still have a mesh
 
 ## Still out of scope
 

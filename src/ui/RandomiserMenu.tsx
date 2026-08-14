@@ -115,7 +115,7 @@ export function RandomiserMenu({
           />
           <SliderField
             label="Inland seas"
-            hint="Lakes and epeiric seas above the global ocean"
+            hint="Epeiric seas; wet climates also grow ponds. Rivers follow valleys."
             value={settings.inlandSeas}
             min={0}
             max={1}
