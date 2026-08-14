@@ -113,6 +113,20 @@ float fbm(vec3 p, float extra) {
   return a;
 }
 
+float ridge(vec3 p) {
+  return 1.0 - abs(vnoise(p) * 2.0 - 1.0);
+}
+
+float triGrain(vec3 p, float freq) {
+  vec3 w = abs(p);
+  w *= w;
+  w /= max(w.x + w.y + w.z, 1.0e-4);
+  float xy = vnoise(vec3(p.x, p.y, 0.17) * freq);
+  float yz = vnoise(vec3(p.y, p.z, 0.41) * freq);
+  float zx = vnoise(vec3(p.z, p.x, 0.73) * freq);
+  return xy * w.z + yz * w.x + zx * w.y;
+}
+
 float riverBand(vec3 p, float sharp) {
   float d = abs(vnoise(p) - 0.5) * 2.0;
   return pow(clamp(1.0 - d, 0.0, 1.0), sharp);
@@ -340,6 +354,27 @@ void main() {
   bumpAmp *= 1.0 - vSkirt;
   bumpAmp *= mix(1.0, 0.55, snowHint);
   N = normalize(N + (grad - radial * dot(grad, radial)) * bumpAmp);
+
+  float mountain =
+    (1.0 - smoothstep(-0.12, 0.22, vClimate.z)) *
+    smoothstep(0.01, 0.038, height) *
+    landCover *
+    (1.0 - vSkirt) *
+    (1.0 - fresh);
+  vec3 rpN = local * 34.0 + uSeed * 0.7;
+  float rEps = 0.03;
+  vec3 rGrad = vec3(
+    ridge(rpN + vec3(rEps, 0.0, 0.0)) - ridge(rpN - vec3(rEps, 0.0, 0.0)),
+    ridge(rpN + vec3(0.0, rEps, 0.0)) - ridge(rpN - vec3(0.0, rEps, 0.0)),
+    ridge(rpN + vec3(0.0, 0.0, rEps)) - ridge(rpN - vec3(0.0, 0.0, rEps))
+  );
+  rGrad += vec3(
+    ridge(rpN * 2.05 + 4.2 + vec3(rEps, 0.0, 0.0)) - ridge(rpN * 2.05 + 4.2 - vec3(rEps, 0.0, 0.0)),
+    ridge(rpN * 2.05 + 4.2 + vec3(0.0, rEps, 0.0)) - ridge(rpN * 2.05 + 4.2 - vec3(0.0, rEps, 0.0)),
+    ridge(rpN * 2.05 + 4.2 + vec3(0.0, 0.0, rEps)) - ridge(rpN * 2.05 + 4.2 - vec3(0.0, 0.0, rEps))
+  ) * 0.45;
+  float ridgeAmp = mix(0.0, 0.62, close) * mountain;
+  N = normalize(N + (rGrad - radial * dot(rGrad, radial)) * ridgeAmp);
   N = normalize(mix(N, radial, fresh * 0.62));
 
   slope = 1.0 - clamp(dot(N, radial), 0.0, 1.0);
@@ -376,8 +411,13 @@ void main() {
   snow *= 1.0 - fresh * (1.0 - frozen);
   col = mix(col, uSnowColor, clamp(snow * snowSlope, 0.0, 1.0) * 0.9);
 
-  float grain = fbm(local * 42.0 + uSeed, 0.3);
-  col *= 0.95 + grain * mix(0.05, 0.14, close) * (1.0 - fresh * 0.65);
+  float continent = 1.0 - smoothstep(0.48, 1.35, dist);
+  float g0 = triGrain(local + uSeed * 0.03, 54.0);
+  float g1 = triGrain(local * 1.07 - uSeed * 0.02, 118.0);
+  float grain = g0 * 0.62 + g1 * 0.38;
+  float grainAmp = mix(0.03, 0.16, continent) * (1.0 - fresh * 0.7) * landCover;
+  col *= 0.94 + grain * grainAmp;
+  col = mix(col, mix(col, uRockColor, 0.35), (1.0 - grain) * rockMix * continent * 0.28);
 
   float valleyAO =
     landCover *
@@ -390,10 +430,13 @@ void main() {
   float ao = 1.0 - clamp(valleyAO, 0.0, 0.65);
   vec3 Lpre = normalize(uLightDir);
   float sunHit = clamp(dot(N, Lpre), 0.0, 1.0);
+  float grassMask = (1.0 - rockMix) * (1.0 - snow) * landCover * (1.0 - fresh);
+  float fold = 1.0 - ao;
+  col = mix(col, col * vec3(0.42, 0.58, 0.4), fold * grassMask * 0.62);
   col = mix(
     col,
-    col * vec3(1.12, 1.16, 0.8),
-    sunHit * (1.0 - rockMix) * (1.0 - snow) * landCover * 0.38
+    col * vec3(1.22, 1.28, 0.7),
+    sunHit * grassMask * (1.0 - fold * 0.55) * 0.58
   );
   col *= mix(0.72, 1.0, ao);
 
@@ -428,6 +471,21 @@ void main() {
   vec3 H = normalize(L + V);
   float spec = pow(max(dot(N, H), 0.0), 48.0) * specMask;
   lit += vec3(spec) * 0.25 * (1.0 - uFill);
+
+  if (uOverlay < 0.5) {
+    float graze = pow(1.0 - abs(dot(radial, V)), 2.4);
+    float valleyMist =
+      smoothstep(-0.22, 0.18, vClimate.z) *
+      (1.0 - smoothstep(0.025, 0.13, height));
+    float haze =
+      graze *
+      smoothstep(0.38, 1.45, dist) *
+      mix(0.12, 1.0, valleyMist) *
+      landCover *
+      (1.0 - fresh) *
+      (1.0 - uFill * 0.35);
+    lit = mix(lit, vec3(0.76, 0.82, 0.88), clamp(haze * 0.55, 0.0, 0.72));
+  }
 
   gl_FragColor = vec4(lit, 1.0);
 }

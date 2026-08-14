@@ -22,9 +22,6 @@ Runeterra-style relief is mostly **lighting a height field**, not a hand-painted
 2. Valley AO — darken eroded folds and steep crevices (planet-fixed, not screen-space)
 3. Slope rock — expose rock on steep faces the way a painted map uses cliff grain
 4. Baked normal cubemap — light from height, not from tile triangles
-
-### Next
-
 5. Sunlit vs fold color — yellow-green on lit grass, deeper green in shade
 6. Micro grain / triplanar detail at continent zoom
 7. Valley haze when looking across land
