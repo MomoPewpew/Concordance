@@ -71,8 +71,6 @@ function CloudLayer({
           uHasMaps: { value: 0 },
           uValley: { value: valley },
           uCloudAlt: { value: radius - 1 },
-          uRadius: { value: radius },
-          uGap: { value: 0.0054 },
         },
         transparent: true,
         depthWrite: false,
@@ -99,7 +97,6 @@ function CloudLayer({
     material.uniforms.uHasMaps.value = baked ? 1 : 0
     material.uniforms.uValley.value = valley
     material.uniforms.uCloudAlt.value = radius - 1
-    material.uniforms.uRadius.value = radius
   }, [baked, material, radius, valley])
 
   useFillLight(material, evenLight)

@@ -652,32 +652,14 @@ void main() {
 `
 
 export const cloudVertexShader = /* glsl */ `
-uniform samplerCube uMaps;
-uniform float uHasMaps;
-uniform float uValley;
-uniform float uCloudAlt;
-uniform float uRadius;
-uniform float uGap;
-
 varying vec3 vNormal;
 varying vec3 vWorldPos;
 varying vec3 vObjectPos;
 
 void main() {
-  vec3 dir = normalize(position);
-  float cloudElev = uCloudAlt;
-  if (uHasMaps > 0.5) {
-    float a = textureCube(uMaps, dir).a;
-    float land = smoothstep(0.46, 0.66, a);
-    float elev = max((a - 0.5) / 6.0, 0.0);
-    float follow =
-      (1.0 - smoothstep(0.002, uCloudAlt * 0.78, elev)) * land * uValley;
-    cloudElev = mix(uCloudAlt, elev + uGap, follow);
-  }
-  vObjectPos = dir;
-  vec3 pos = dir * ((1.0 + cloudElev) / max(uRadius, 1.0e-4));
-  vNormal = normalize(mat3(modelMatrix) * dir);
-  vec4 world = modelMatrix * vec4(pos, 1.0);
+  vObjectPos = position;
+  vNormal = normalize(mat3(modelMatrix) * normal);
+  vec4 world = modelMatrix * vec4(position, 1.0);
   vWorldPos = world.xyz;
   gl_Position = projectionMatrix * viewMatrix * world;
 }
@@ -700,7 +682,6 @@ uniform samplerCube uMaps;
 uniform float uHasMaps;
 uniform float uValley;
 uniform float uCloudAlt;
-uniform float uGap;
 
 varying vec3 vNormal;
 varying vec3 vWorldPos;
@@ -769,18 +750,14 @@ void main() {
     float a = mix(a0, a1, 0.42);
     float land = smoothstep(0.46, 0.66, a);
     float elev = (a - 0.5) / 6.0;
-    elev += (vnoise(dir * 18.0 + uOffset * 0.15) - 0.5) * 0.0038;
-    elev += (vnoise(dir * 42.0 - uOffset * 0.08) - 0.5) * 0.0014;
+    float wobble = (vnoise(dir * 18.0 + uOffset * 0.15) - 0.5) * 0.002;
     float elev0 = max(elev, 0.0);
-    float follow =
-      (1.0 - smoothstep(0.002, uCloudAlt * 0.78, elev0)) * land * uValley;
-    float cloudElev = mix(uCloudAlt, elev0 + uGap, follow);
-    float valley = (1.0 - smoothstep(0.0, uCloudAlt * 0.55, elev0)) * land;
-    coverage -= valley * 0.18 * uValley;
+    float valley = (1.0 - smoothstep(0.0, uCloudAlt * 0.7, elev0)) * land;
+    coverage -= valley * 0.16 * uValley;
 
-    float clearance = cloudElev - elev;
-    float aa = max(fwidth(clearance), 0.0012);
-    lift = smoothstep(-0.0024 - aa * 1.4, uGap * 0.42 + aa * 2.2, clearance);
+    float clearance = uCloudAlt - elev + wobble;
+    float aa = min(fwidth(elev), 0.003);
+    lift = smoothstep(-0.003 - aa, 0.01 + aa * 1.8, clearance);
   }
 
   float softness = mix(uSoftness * 1.7, uSoftness, lift);
