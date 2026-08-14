@@ -70,6 +70,9 @@ function CloudLayer({
           uMaps: { value: emptyCubeMap() },
           uHasMaps: { value: 0 },
           uValley: { value: valley },
+          uCloudAlt: { value: radius - 1 },
+          uRadius: { value: radius },
+          uGap: { value: 0.0054 },
         },
         transparent: true,
         depthWrite: false,
@@ -85,6 +88,7 @@ function CloudLayer({
       softness,
       speed,
       stretch,
+      radius,
       valley,
       warp,
     ],
@@ -94,7 +98,9 @@ function CloudLayer({
     material.uniforms.uMaps.value = baked?.albedo ?? emptyCubeMap()
     material.uniforms.uHasMaps.value = baked ? 1 : 0
     material.uniforms.uValley.value = valley
-  }, [baked, material, valley])
+    material.uniforms.uCloudAlt.value = radius - 1
+    material.uniforms.uRadius.value = radius
+  }, [baked, material, radius, valley])
 
   useFillLight(material, evenLight)
 
@@ -109,7 +115,7 @@ function CloudLayer({
       renderOrder={2}
       name="cloud-layer"
     >
-      <sphereGeometry args={[1, 96, 96]} />
+      <sphereGeometry args={[1, 128, 128]} />
     </mesh>
   )
 }
