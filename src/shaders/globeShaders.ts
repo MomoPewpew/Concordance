@@ -53,7 +53,6 @@ uniform float uHeightScale;
 uniform float uSeed;
 uniform samplerCube uMaps;
 uniform float uHasMaps;
-uniform float uMapSize;
 
 varying vec3 vNormal;
 varying vec3 vWorldPos;
@@ -180,22 +179,13 @@ void main() {
     height,
     vTemperature + mottling * 0.2
   );
-  col = mix(col, srgb(0.12, 0.42, 0.48), smoothstep(0.25, 0.75, vLake));
   if (uHasMaps > 0.5 && uOverlay < 0.5) {
     vec4 baked = textureCube(uMaps, local);
-    col = baked.rgb;
-    vec3 up = abs(local.y) > 0.94 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
-    vec3 t1 = normalize(cross(up, local));
-    vec3 t2 = normalize(cross(local, t1));
-    float texel = 2.0 / max(uMapSize, 1.0);
-    float hx =
-      textureCube(uMaps, normalize(local + t1 * texel)).a -
-      textureCube(uMaps, normalize(local - t1 * texel)).a;
-    float hy =
-      textureCube(uMaps, normalize(local + t2 * texel)).a -
-      textureCube(uMaps, normalize(local - t2 * texel)).a;
-    N = normalize(N - (t1 * hx + t2 * hy) * 16.0);
+    if (baked.a > 0.502) {
+      col = srgb(baked.r, baked.g, baked.b);
+    }
   }
+  col = mix(col, srgb(0.12, 0.42, 0.48), smoothstep(0.25, 0.75, vLake));
 
   float bumpFreq = mix(22.0, 96.0, close);
   vec3 bp = radial * bumpFreq + uSeed;

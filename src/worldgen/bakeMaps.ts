@@ -1,5 +1,5 @@
 import type { GlobeParams } from '../data/types'
-import { BIOME_COLORS, pickBiome } from './biomes'
+import { BIOME_SRGB, pickBiome } from './biomes'
 import {
   createClimateSamplers,
   sampleClimate,
@@ -7,11 +7,13 @@ import {
 } from './climate'
 import { applyLapseRate, heightFromClimate } from './height'
 import { clamp } from './noise'
-import { isInlandSea, sampleLakeNoise } from './water'
 
 export const BAKE_SIZE = 512
 
-/** OpenGL cubemap face directions. u,v in [-1, 1], v up. */
+/**
+ * OpenGL cubemap face directions. u,v in [-1, 1] match GPU s,t after a
+ * flipY=false DataTexture upload (row 0 is t=0, the bottom of the face).
+ */
 export function cubeFaceDir(
   face: number,
   u: number,
@@ -69,22 +71,16 @@ export function bakeCubeFace(
 ): Uint8Array {
   const pixels = new Uint8Array(size * size * 4)
   for (let y = 0; y < size; y++) {
-    const v = 1 - (2 * (y + 0.5)) / size
+    const v = (2 * (y + 0.5)) / size - 1
     for (let x = 0; x < size; x++) {
       const u = (2 * (x + 0.5)) / size - 1
       const [dx, dy, dz] = cubeFaceDir(face, u, v)
       const climate = sampleClimate(dx, dy, dz, params, samplers)
       const height = heightFromClimate(climate)
       const elevation = height * params.heightScale
-      const lake = isInlandSea(
-        climate,
-        height,
-        params,
-        sampleLakeNoise(samplers.lake, dx, dy, dz),
-      )
       const temperature = applyLapseRate(climate.temperature, elevation)
-      const biome = pickBiome(climate, height, temperature, lake)
-      const [r, g, b] = BIOME_COLORS[biome]
+      const biome = pickBiome(climate, height, temperature, false)
+      const [r, g, b] = BIOME_SRGB[biome]
       const i = (y * size + x) * 4
       pixels[i] = toByte(r)
       pixels[i + 1] = toByte(g)

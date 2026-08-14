@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   CubeTexture,
+  DataTexture,
   LinearFilter,
-  LinearMipmapLinearFilter,
   NoColorSpace,
   RGBAFormat,
   UnsignedByteType,
@@ -10,20 +10,22 @@ import {
 import type { GlobeParams } from '../data/types'
 import { BAKE_SIZE, bakeKey } from '../worldgen/bakeMaps'
 
-function imageDataFace(data: Uint8Array, size: number): ImageData {
-  const bytes = new Uint8ClampedArray(size * size * 4)
-  bytes.set(data)
-  return new ImageData(bytes, size, size)
-}
-
 function cubeFromFaces(size: number, faces: Uint8Array[]): CubeTexture {
-  const cube = new CubeTexture(faces.map((face) => imageDataFace(face, size)))
+  const images = faces.map((face) => {
+    const data = new Uint8Array(face)
+    const tex = new DataTexture(data, size, size, RGBAFormat, UnsignedByteType)
+    tex.colorSpace = NoColorSpace
+    tex.needsUpdate = true
+    return tex
+  })
+  const cube = new CubeTexture(images)
   cube.format = RGBAFormat
   cube.type = UnsignedByteType
   cube.colorSpace = NoColorSpace
-  cube.minFilter = LinearMipmapLinearFilter
+  cube.minFilter = LinearFilter
   cube.magFilter = LinearFilter
-  cube.generateMipmaps = true
+  cube.generateMipmaps = false
+  cube.flipY = false
   cube.needsUpdate = true
   return cube
 }
@@ -31,7 +33,7 @@ function cubeFromFaces(size: number, faces: Uint8Array[]): CubeTexture {
 function dummyCube(): CubeTexture {
   const faces = Array.from(
     { length: 6 },
-    () => new Uint8Array([128, 128, 128, 128]),
+    () => new Uint8Array([128, 128, 128, 255]),
   )
   return cubeFromFaces(1, faces)
 }

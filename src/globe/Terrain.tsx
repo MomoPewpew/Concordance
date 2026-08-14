@@ -6,7 +6,6 @@ import {
   terrainFragmentShader,
   terrainVertexShader,
 } from '../shaders/globeShaders'
-import { BAKE_SIZE } from '../worldgen/bakeMaps'
 import { generateTerrain } from '../worldgen/generateTerrain'
 import { ROCK_COLOR, SAND_COLOR, SNOW_COLOR, STAR_DIRECTION } from './lighting'
 import { emptyCubeMap, useBakedMaps } from './useBakedMaps'
@@ -39,7 +38,6 @@ export function Terrain({ params, evenLight, overlay }: TerrainProps) {
           uSeed: { value: 0 },
           uMaps: { value: emptyCubeMap() },
           uHasMaps: { value: 0 },
-          uMapSize: { value: BAKE_SIZE },
         },
         vertexColors: false,
         polygonOffset: true,
