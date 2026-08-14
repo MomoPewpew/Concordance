@@ -15,6 +15,7 @@ export default function App() {
   const [viewOpen, setViewOpen] = useState(false)
   const [randomiserOpen, setRandomiserOpen] = useState(false)
   const [showSpinAxis, setShowSpinAxis] = useState(false)
+  const [dayAngle, setDayAngle] = useState(0)
   const [settings, setSettings] = useState<RandomiserSettings>(
     defaultRandomiserSettings,
   )
@@ -66,6 +67,8 @@ export default function App() {
           onOpenChange={setViewOpen}
           showSpinAxis={showSpinAxis}
           onShowSpinAxisChange={setShowSpinAxis}
+          dayAngle={dayAngle}
+          onDayAngleChange={setDayAngle}
         />
         <RandomiserMenu
           open={randomiserOpen}
@@ -77,7 +80,7 @@ export default function App() {
           onGenerate={generate}
         />
       </div>
-      <Globe world={world} showSpinAxis={showSpinAxis} />
+      <Globe world={world} showSpinAxis={showSpinAxis} dayAngle={dayAngle} />
     </div>
   )
 }

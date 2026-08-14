@@ -1,11 +1,14 @@
 import { useId } from 'react'
 import { ORBIT_AXIS_COLOR, SPIN_AXIS_COLOR } from '../globe/axes'
+import { SliderField } from './SliderField'
 
 type ViewMenuProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   showSpinAxis: boolean
   onShowSpinAxisChange: (show: boolean) => void
+  dayAngle: number
+  onDayAngleChange: (angle: number) => void
 }
 
 export function ViewMenu({
@@ -13,6 +16,8 @@ export function ViewMenu({
   onOpenChange,
   showSpinAxis,
   onShowSpinAxisChange,
+  dayAngle,
+  onDayAngleChange,
 }: ViewMenuProps) {
   const toggleId = useId()
 
@@ -28,7 +33,7 @@ export function ViewMenu({
         View
       </button>
       {open && (
-        <div className="chrome-panel">
+        <div className="chrome-panel chrome-panel-wide">
           <label className="view-menu-item" htmlFor={toggleId}>
             <input
               id={toggleId}
@@ -62,6 +67,16 @@ export function ViewMenu({
               </li>
             </ul>
           )}
+          <SliderField
+            label="Daylight"
+            hint="Rotate the planet around its spin axis to change which side faces the sun"
+            value={dayAngle}
+            min={0}
+            max={360}
+            step={1}
+            display={`${Math.round(dayAngle)}°`}
+            onChange={onDayAngleChange}
+          />
         </div>
       )}
     </div>

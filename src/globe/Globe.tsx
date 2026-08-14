@@ -8,9 +8,10 @@ import { Starfield } from './Starfield'
 type GlobeProps = {
   world: World
   showSpinAxis: boolean
+  dayAngle: number
 }
 
-export function Globe({ world, showSpinAxis }: GlobeProps) {
+export function Globe({ world, showSpinAxis, dayAngle }: GlobeProps) {
   return (
     <Canvas
       camera={{ position: [0, 0.32, 2.35], fov: 42, near: 0.01, far: 500 }}
@@ -24,7 +25,11 @@ export function Globe({ world, showSpinAxis }: GlobeProps) {
     >
       <color attach="background" args={['#02010a']} />
       <Starfield />
-      <GlobeScene world={world} showSpinAxis={showSpinAxis} />
+      <GlobeScene
+        world={world}
+        showSpinAxis={showSpinAxis}
+        dayAngle={dayAngle}
+      />
       <GlobeControls />
     </Canvas>
   )

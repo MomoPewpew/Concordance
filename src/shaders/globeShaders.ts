@@ -15,8 +15,8 @@ void main() {
   vElevation = elevation;
   vTemperature = temperature;
   vec3 radial = normalize(position);
-  vRadial = normalize(normalMatrix * radial);
-  vNormal = normalize(normalMatrix * normal);
+  vRadial = normalize(mat3(modelMatrix) * radial);
+  vNormal = normalize(mat3(modelMatrix) * normal);
   vec4 world = modelMatrix * vec4(position, 1.0);
   vWorldPos = world.xyz;
   gl_Position = projectionMatrix * viewMatrix * world;
@@ -88,7 +88,7 @@ varying vec3 vNormal;
 varying vec3 vWorldPos;
 
 void main() {
-  vNormal = normalize(normalMatrix * normal);
+  vNormal = normalize(mat3(modelMatrix) * normal);
   vec4 world = modelMatrix * vec4(position, 1.0);
   vWorldPos = world.xyz;
   gl_Position = projectionMatrix * viewMatrix * world;
@@ -131,7 +131,7 @@ varying vec3 vWorldPos;
 varying vec3 vNormal;
 
 void main() {
-  vNormal = normalize(normalMatrix * normal);
+  vNormal = normalize(mat3(modelMatrix) * normal);
   vec4 world = modelMatrix * vec4(position, 1.0);
   vWorldPos = world.xyz;
   gl_Position = projectionMatrix * viewMatrix * world;
@@ -163,7 +163,7 @@ varying vec3 vObjectPos;
 
 void main() {
   vObjectPos = position;
-  vNormal = normalize(normalMatrix * normal);
+  vNormal = normalize(mat3(modelMatrix) * normal);
   vec4 world = modelMatrix * vec4(position, 1.0);
   vWorldPos = world.xyz;
   gl_Position = projectionMatrix * viewMatrix * world;
@@ -248,16 +248,17 @@ void main() {
   vec3 N = normalize(vNormal);
   vec3 V = normalize(cameraPosition - vWorldPos);
   float ndv = max(dot(N, V), 0.0);
-  cloud *= smoothstep(0.0, 0.12, ndv);
-  cloud *= 0.85 + 0.15 * ndv;
+  cloud *= 0.7 + 0.3 * ndv;
 
   if (cloud < 0.012) discard;
 
   vec3 L = normalize(uLightDir);
-  float wrap = dot(N, L) * 0.5 + 0.5;
-  vec3 lit = uColor * (0.28 + wrap * 0.85);
-  float terminator = smoothstep(-0.15, 0.35, dot(N, L));
-  lit = mix(uColor * 0.22, lit, terminator);
+  float ndl = dot(N, L);
+  float wrap = ndl * 0.4 + 0.6;
+  vec3 day = uColor * (0.42 + wrap * 0.7);
+  vec3 night = uColor * 0.58;
+  float terminator = smoothstep(-0.35, 0.25, ndl);
+  vec3 lit = mix(night, day, terminator);
 
   gl_FragColor = vec4(lit, cloud * uOpacity);
 }
