@@ -4,7 +4,7 @@ const globe: GlobeParams = {
   seed: 1729,
   seaLevel: 0,
   heightScale: 0.082,
-  resolution: 192,
+  resolution: 320,
   oceanBias: -0.22,
   axialTilt: 0,
   continentalness: {

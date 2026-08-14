@@ -5,6 +5,7 @@ import { Clouds } from './Clouds'
 import { SUN_DIRECTION } from './lighting'
 import { Ocean } from './Ocean'
 import { OrbitAxis, SpinAxis } from './PlanetAxes'
+import { Precipitation } from './Precipitation'
 import { SeaLevel } from './SeaLevel'
 import { Terrain } from './Terrain'
 
@@ -28,6 +29,7 @@ export function GlobeScene({ world, showSpinAxis }: GlobeSceneProps) {
         <SeaLevel />
         <Ocean />
         <Terrain params={world.globe} />
+        <Precipitation params={world.globe} />
         <Clouds seed={world.globe.seed} />
         <Atmosphere />
         {showSpinAxis && <SpinAxis />}

@@ -44,3 +44,9 @@ export const CLOUD_COLOR = new Vector3(
   srgbToLinear(0.95),
   srgbToLinear(0.98),
 )
+
+export const RAIN_COLOR = new Vector3(
+  srgbToLinear(0.62),
+  srgbToLinear(0.76),
+  srgbToLinear(0.95),
+)

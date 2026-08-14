@@ -262,3 +262,86 @@ void main() {
   gl_FragColor = vec4(lit, cloud * uOpacity);
 }
 `
+
+export const precipVertexShader = /* glsl */ `
+attribute float aPhase;
+attribute float aSpeed;
+attribute float aKind;
+attribute float aIntensity;
+
+uniform float uTime;
+uniform float uInner;
+uniform float uOuter;
+uniform vec3 uLightDir;
+
+varying float vKind;
+varying float vIntensity;
+varying float vFade;
+varying float vSun;
+varying vec2 vFallDir;
+
+void main() {
+  vec3 dir = normalize(position);
+  float cycle = fract(aPhase + uTime * aSpeed);
+  float h = mix(uOuter, uInner, cycle);
+
+  float wobble = aKind * 0.006;
+  vec3 pos = dir * h;
+  pos += vec3(
+    sin(uTime * 1.7 + aPhase * 6.28) * wobble,
+    0.0,
+    cos(uTime * 1.4 + aPhase * 5.1) * wobble
+  );
+
+  vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+  vec4 mvFall = modelViewMatrix * vec4(pos - dir * 0.025, 1.0);
+  vec4 clip = projectionMatrix * mv;
+  vec4 clipFall = projectionMatrix * mvFall;
+  vec2 screen = clip.xy / max(clip.w, 0.0001);
+  vec2 screenFall = clipFall.xy / max(clipFall.w, 0.0001);
+  vec2 fall = screenFall - screen;
+  vFallDir = length(fall) > 0.00001 ? normalize(fall) : vec2(0.0, -1.0);
+
+  vec3 worldDir = normalize((modelMatrix * vec4(dir, 0.0)).xyz);
+  vKind = aKind;
+  vIntensity = aIntensity;
+  vFade = smoothstep(0.0, 0.1, cycle) * (1.0 - smoothstep(0.84, 1.0, cycle));
+  vSun = clamp(dot(worldDir, normalize(uLightDir)) * 0.45 + 0.55, 0.28, 1.0);
+
+  gl_Position = clip;
+  float dist = max(length(mv.xyz), 0.2);
+  float size = mix(30.0, 13.0, aKind) * (0.75 / dist);
+  size *= 0.7 + 0.5 * aIntensity;
+  gl_PointSize = clamp(size, 2.0, 42.0);
+}
+`
+
+export const precipFragmentShader = /* glsl */ `
+uniform vec3 uRainColor;
+uniform vec3 uSnowColor;
+
+varying float vKind;
+varying float vIntensity;
+varying float vFade;
+varying float vSun;
+varying vec2 vFallDir;
+
+void main() {
+  vec2 uv = gl_PointCoord - 0.5;
+  uv.y = -uv.y;
+
+  vec2 along = normalize(vFallDir);
+  vec2 across = vec2(-along.y, along.x);
+  float u = dot(uv, across);
+  float v = dot(uv, along);
+
+  float rain = (1.0 - smoothstep(0.03, 0.1, abs(u))) * (1.0 - smoothstep(0.28, 0.5, abs(v)));
+  float flake = 1.0 - smoothstep(0.12, 0.42, length(uv));
+  float shape = mix(rain, flake, vKind);
+  if (shape < 0.02) discard;
+
+  vec3 col = mix(uRainColor, uSnowColor, vKind);
+  float alpha = shape * vFade * mix(0.22, 0.55, vKind) * vIntensity * vSun;
+  gl_FragColor = vec4(col, alpha);
+}
+`
