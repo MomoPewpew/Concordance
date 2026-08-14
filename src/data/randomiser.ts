@@ -15,6 +15,8 @@ export type RandomiserSettings = {
   roughness: number
   /** 0 = broad climate bands, 1 = patchier biomes. */
   climateVariation: number
+  /** Cube-sphere verts per face edge. */
+  resolution: number
 }
 
 const OCEAN_BIAS = { land: 0.18, water: -0.48 }
@@ -24,6 +26,7 @@ const WEIRDNESS_SCALE = { min: 2.2, max: 5.5 }
 const EROSION_SCALE = { min: 2.0, max: 4.2 }
 const TEMP_SCALE = { min: 0.8, max: 2.6 }
 const HUMIDITY_SCALE = { min: 1.2, max: 3.0 }
+const RESOLUTION = { min: 128, max: 512 }
 
 function inverseLerp(a: number, b: number, v: number): number {
   if (a === b) return 0
@@ -50,6 +53,7 @@ export function settingsFromGlobe(globe: GlobeParams): RandomiserSettings {
       TEMP_SCALE.max,
       globe.temperature.scale,
     ),
+    resolution: clamp(globe.resolution, RESOLUTION.min, RESOLUTION.max),
   }
 }
 
@@ -88,6 +92,9 @@ export function globeFromSettings(
       ...base.humidity,
       scale: lerp(HUMIDITY_SCALE.min, HUMIDITY_SCALE.max, settings.climateVariation),
     },
+    resolution: Math.round(
+      clamp(settings.resolution, RESOLUTION.min, RESOLUTION.max),
+    ),
   }
 }
 

@@ -101,6 +101,16 @@ export function RandomiserMenu({
             display={percent(settings.climateVariation)}
             onChange={(climateVariation) => patch({ climateVariation })}
           />
+          <SliderField
+            label="Resolution"
+            hint="Mesh density. Higher is sharper coasts, slower to generate"
+            value={settings.resolution}
+            min={128}
+            max={512}
+            step={32}
+            display={`${settings.resolution}`}
+            onChange={(resolution) => patch({ resolution })}
+          />
           <div className="randomiser-footer">
             <span className="randomiser-seed">Seed {seed}</span>
             <button
